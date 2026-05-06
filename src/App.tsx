@@ -1,21 +1,26 @@
-import { Button } from "@/components/ui/button"
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom"
+import { VotingProvider } from "@/context/VotingContext"
+import StudentLoginPage from "@/pages/student/StudentLoginPage"
+import StudentOTPPage from "@/pages/student/StudentOTPPage"
+import StudentVotingPage from "@/pages/student/StudentVotingPage"
+import StudentAssociationDetailPage from "@/pages/student/StudentAssociationDetailPage"
+import StudentConfirmPage from "@/pages/student/StudentConfirmPage"
+import StudentSuccessPage from "@/pages/student/StudentSuccessPage"
 
-export function App() {
+export default function App() {
   return (
-    <div className="flex min-h-svh p-6">
-      <div className="flex max-w-md min-w-0 flex-col gap-4 text-sm leading-loose">
-        <div>
-          <h1 className="font-medium">Project ready!</h1>
-          <p>You may now add components and start building.</p>
-          <p>We&apos;ve already added the button component for you.</p>
-          <Button className="mt-2">Button</Button>
-        </div>
-        <div className="font-mono text-xs text-muted-foreground">
-          (Press <kbd>d</kbd> to toggle dark mode)
-        </div>
-      </div>
-    </div>
+    <BrowserRouter>
+      <VotingProvider>
+        <Routes>
+          <Route path="/" element={<Navigate to="/student/login" replace />} />
+          <Route path="/student/login" element={<StudentLoginPage />} />
+          <Route path="/student/verificar" element={<StudentOTPPage />} />
+          <Route path="/student/votar" element={<StudentVotingPage />} />
+          <Route path="/student/detalle" element={<StudentAssociationDetailPage />} />
+          <Route path="/student/confirmar" element={<StudentConfirmPage />} />
+          <Route path="/student/exito" element={<StudentSuccessPage />} />
+        </Routes>
+      </VotingProvider>
+    </BrowserRouter>
   )
 }
-
-export default App

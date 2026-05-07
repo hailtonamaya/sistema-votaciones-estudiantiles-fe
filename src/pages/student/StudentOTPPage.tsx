@@ -22,22 +22,37 @@ export default function StudentOTPPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!complete) return
+    if (!complete || loading) return
 
     setLoading(true)
     setError("")
 
+    let token = ""
     try {
-      const { token, student } = await verifyStudentOTP(email!, code)
-      setAuth(token, student)
+      const auth = await verifyStudentOTP(email!, code)
+      token = auth.token
+      setAuth(auth.token, auth.student)
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Código incorrecto o expirado. Inténtalo de nuevo.",
+      )
+      setLoading(false)
+      return
+    }
 
+    try {
       const election = await getStudentElection(token)
       setElection(election)
       startVoting()
-
       navigate("/student/votar")
-    } catch {
-      setError("Código incorrecto o expirado. Inténtalo de nuevo.")
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo cargar la elección.",
+      )
     } finally {
       setLoading(false)
     }

@@ -14,7 +14,7 @@ export default function StudentLoginPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     const trimmed = email.trim()
-    if (!trimmed) return
+    if (!trimmed || loading) return
 
     setLoading(true)
     setError("")

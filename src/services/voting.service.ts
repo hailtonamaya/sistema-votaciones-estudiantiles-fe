@@ -1,106 +1,104 @@
+import { api } from "@/lib/api"
 import type { Election, Student, VotePayload, VoteResult } from "@/types/voting"
 
-// ---------------------------------------------------------------------------
-// Stubs — replace each function body with the real API call when the backend
-// is ready. The signatures and return types must not change.
-// ---------------------------------------------------------------------------
-
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000/api"
-
-// Sends a 6-digit OTP to the student's institutional email.
-// POST /auth/student/request-otp
-export async function requestStudentOTP(email: string): Promise<void> {
-  // await fetch(`${BASE_URL}/auth/student/request-otp`, {
-  //   method: "POST",
-  //   headers: { "Content-Type": "application/json" },
-  //   body: JSON.stringify({ email }),
-  // })
-  void BASE_URL
-  void email
-  await delay(600)
+interface VerifyOtpResponse {
+  token: string
+  user: {
+    user_id: string
+    email: string
+    full_name: string
+    role: string
+  }
 }
 
-// Verifies the OTP and returns a token + student info.
-// POST /auth/student/verify-otp
+interface CurrentElectionResponse {
+  data: {
+    election_id: string
+    title: string
+    description: string | null
+    start_at: string | null
+    end_at: string | null
+    career_id: string
+    career_name: string
+    career_code: string
+    has_voted: boolean
+    associations: Array<{
+      association_id: string
+      name: string
+      description: string | null
+      logo_url: string | null
+      association_member: Array<{
+        association_member_id: string
+        full_name: string
+        role: string | null
+        photo_url: string | null
+      }>
+    }>
+  } | null
+}
+
+interface CastBallotResponse {
+  data: {
+    ballot_hash: string
+    submitted_at: string
+  }
+}
+
+export async function requestStudentOTP(email: string): Promise<void> {
+  await api<{ ok: boolean; message: string }>("/auth/request-otp", {
+    method: "POST",
+    body: { email },
+  })
+}
+
 export async function verifyStudentOTP(
   email: string,
   code: string,
 ): Promise<{ token: string; student: Student }> {
-  // const res = await fetch(`${BASE_URL}/auth/student/verify-otp`, {
-  //   method: "POST",
-  //   headers: { "Content-Type": "application/json" },
-  //   body: JSON.stringify({ email, code }),
-  // })
-  // const data = await res.json()
-  // if (!res.ok) throw new Error(data.message ?? "Código inválido")
-  // return data
-  void email
-  void code
-  await delay(600)
+  const data = await api<VerifyOtpResponse>("/auth/verify-otp", {
+    method: "POST",
+    body: { email, code },
+  })
+
   return {
-    token: "mock-jwt-token",
+    token: data.token,
     student: {
-      id: "stu-001",
-      email,
-      name: "Estudiante Demo",
-      careerId: "addi",
-      careerName: "Animación Digital y Diseño Interactivo",
+      id: data.user.user_id,
+      email: data.user.email,
+      name: data.user.full_name,
+      careerId: "",
+      careerName: "",
     },
   }
 }
 
-// Returns the active election for the authenticated student's career.
-// GET /elections/current
 export async function getStudentElection(token: string): Promise<Election> {
-  // const res = await fetch(`${BASE_URL}/elections/current`, {
-  //   headers: { Authorization: `Bearer ${token}` },
-  // })
-  // const data = await res.json()
-  // if (!res.ok) throw new Error(data.message ?? "Error al cargar elección")
-  // return data
-  void token
-  await delay(400)
+  const res = await api<CurrentElectionResponse>("/elections/me/current", { token })
+  if (!res.data) {
+    throw new Error("No tienes ninguna elección activa habilitada para tu carrera.")
+  }
+  const e = res.data
   return {
-    id: "elec-2026",
-    title: "Elecciones estudiantiles UNITEC - 2026",
-    careerId: "addi",
-    careerName: "Animación Digital y Diseño Interactivo",
-    associations: [
-      {
-        id: "assoc-quaddi",
-        name: "QUADDI",
-        careerId: "addi",
-        careerName: "Animación Digital y Diseño Interactivo",
-        photoUrl: null,
-        candidates: [
-          { id: "c1", name: "María López", role: "Presidenta", photoUrl: null },
-          { id: "c2", name: "Carlos Mejía", role: "Vicepresidente", photoUrl: null },
-          { id: "c3", name: "Sofía Ramos", role: "Secretaria", photoUrl: null },
-          { id: "c4", name: "Ángel Cruz", role: "Tesorero", photoUrl: null },
-          { id: "c5", name: "Adriana Flores", role: "Coord. de Redes Sociales", photoUrl: null },
-          { id: "c6", name: "Yariela Bustillo", role: "Coord. de Primer Ingreso", photoUrl: null },
-          { id: "c7", name: "Valeria Leiva", role: "Gestora de Arte", photoUrl: null },
-        ],
-      },
-      {
-        id: "assoc-kernel",
-        name: "KERNEL",
-        careerId: "addi",
-        careerName: "Animación Digital y Diseño Interactivo",
-        photoUrl: null,
-        candidates: [
-          { id: "c8", name: "Luis Andrade", role: "Presidente", photoUrl: null },
-          { id: "c9", name: "Diana Soto", role: "Vicepresidenta", photoUrl: null },
-          { id: "c10", name: "Roberto Paz", role: "Secretario", photoUrl: null },
-          { id: "c11", name: "Karla Murillo", role: "Tesorera", photoUrl: null },
-        ],
-      },
-    ],
+    id: e.election_id,
+    title: e.title,
+    careerId: e.career_id,
+    careerName: e.career_name,
+    associations: e.associations.map((a) => ({
+      id: a.association_id,
+      name: a.name,
+      careerId: e.career_id,
+      careerName: e.career_name,
+      photoUrl: a.logo_url,
+      candidates: a.association_member.map((m) => ({
+        id: m.association_member_id,
+        name: m.full_name,
+        role: m.role ?? "",
+        photoUrl: m.photo_url,
+      })),
+    })),
   }
 }
 
-// Registers the student's vote.
-// POST /votes
 export async function castVote(
   payload: VotePayload,
   token: string,
@@ -109,23 +107,16 @@ export async function castVote(
   associationName: string,
   votingTimeSeconds: number,
 ): Promise<VoteResult> {
-  // const res = await fetch(`${BASE_URL}/votes`, {
-  //   method: "POST",
-  //   headers: {
-  //     "Content-Type": "application/json",
-  //     Authorization: `Bearer ${token}`,
-  //   },
-  //   body: JSON.stringify(payload),
-  // })
-  // const data = await res.json()
-  // if (!res.ok) throw new Error(data.message ?? "Error al registrar voto")
-  // return data
-  void payload
-  void token
-  await delay(800)
-  return { electionTitle, careerName, associationName, votingTimeSeconds }
-}
+  const isBlank = payload.associationId === null
+  await api<CastBallotResponse>("/ballots", {
+    method: "POST",
+    token,
+    body: {
+      election_id: payload.electionId,
+      association_id: isBlank ? undefined : payload.associationId,
+      is_blank: isBlank,
+    },
+  })
 
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
+  return { electionTitle, careerName, associationName, votingTimeSeconds }
 }

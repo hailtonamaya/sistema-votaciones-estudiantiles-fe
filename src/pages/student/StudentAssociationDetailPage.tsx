@@ -49,7 +49,7 @@ export default function StudentAssociationDetailPage() {
     !selectedAssociation ||
     selectedAssociation === "blank"
   ) {
-    navigate("/student/login")
+    navigate("/login")
     return null
   }
 

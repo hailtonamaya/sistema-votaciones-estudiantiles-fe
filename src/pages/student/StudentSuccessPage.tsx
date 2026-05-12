@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { UnitecLogo } from "@/components/UnitecLogo"
 import { useVoting } from "@/context/VotingContext"
+import { useAuth } from "@/context/AuthContext"
 
 const AUTO_CLOSE_SECONDS = 30
 
@@ -17,9 +18,10 @@ export default function StudentSuccessPage() {
   const [countdown, setCountdown] = useState(AUTO_CLOSE_SECONDS)
   const navigate = useNavigate()
   const { voteResult, reset } = useVoting()
+  const { logout } = useAuth()
 
   if (!voteResult) {
-    navigate("/student/login")
+    navigate("/login")
     return null
   }
 
@@ -30,18 +32,20 @@ export default function StudentSuccessPage() {
         if (c <= 1) {
           clearInterval(id)
           reset()
-          navigate("/student/login")
+          logout()
+          navigate("/login")
           return 0
         }
         return c - 1
       })
     }, 1000)
     return () => clearInterval(id)
-  }, [navigate, reset])
+  }, [navigate, reset, logout])
 
   function handleFinish() {
     reset()
-    navigate("/student/login")
+    logout()
+    navigate("/login")
   }
 
   return (

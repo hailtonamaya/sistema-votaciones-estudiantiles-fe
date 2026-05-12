@@ -12,7 +12,7 @@ export default function StudentVotingPage() {
   const { election, voteStartTime, selectAssociation } = useVoting()
 
   if (!election || !voteStartTime) {
-    navigate("/student/login")
+    navigate("/login")
     return null
   }
 

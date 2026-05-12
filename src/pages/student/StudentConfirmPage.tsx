@@ -3,22 +3,23 @@ import { useNavigate } from "react-router-dom"
 import { VotingTimer } from "@/components/student/VotingTimer"
 import { UnitecLogo } from "@/components/UnitecLogo"
 import { useVoting } from "@/context/VotingContext"
+import { useAuth } from "@/context/AuthContext"
 import { castVote } from "@/services/voting.service"
 
 export default function StudentConfirmPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const navigate = useNavigate()
+  const { token } = useAuth()
   const {
     election,
     selectedAssociation,
-    token,
     voteStartTime,
     setVoteResult,
   } = useVoting()
 
   if (!election || !selectedAssociation || !token || !voteStartTime) {
-    navigate("/student/login")
+    navigate("/login")
     return null
   }
 

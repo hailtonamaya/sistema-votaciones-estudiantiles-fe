@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom"
 import { AuthProvider } from "@/context/AuthContext"
 import { VotingProvider } from "@/context/VotingContext"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
+import { ChatWidget } from "@/components/ChatWidget"
 
 import LoginPage from "@/pages/LoginPage"
 import OTPPage from "@/pages/OTPPage"
@@ -147,6 +148,7 @@ export default function App() {
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
+          <ChatWidget />
         </VotingProvider>
       </AuthProvider>
     </BrowserRouter>

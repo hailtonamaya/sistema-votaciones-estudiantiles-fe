@@ -5,6 +5,7 @@ import { UnitecLogo } from "@/components/UnitecLogo"
 import { useVoting } from "@/context/VotingContext"
 import { useAuth } from "@/context/AuthContext"
 import { castVote } from "@/services/voting.service"
+import type { Association } from "@/types/voting"
 
 export default function StudentConfirmPage() {
   const [loading, setLoading] = useState(false)
@@ -39,7 +40,7 @@ export default function StudentConfirmPage() {
       const result = await castVote(
         {
           electionId: election!.id,
-          associationId: isBlank ? null : selectedAssociation !== "blank" ? selectedAssociation.id : null,
+          associationId: isBlank ? null : (selectedAssociation as Association).id,
         },
         token!,
         election!.title,

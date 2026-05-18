@@ -22,7 +22,7 @@ const CARRERAS = [
   "Ciencia de Datos e Inteligencia Artificial",
 ]
 
-const MOCK_HAS_ACTIVE_ELECTION = false
+const MOCK_HAS_ACTIVE_ELECTION = true
 
 function LineChart() {
   const pts: [number, number][] = [

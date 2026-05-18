@@ -33,7 +33,7 @@ export default function OTPPage() {
     setError("")
 
     try {
-      const { token, user } = await verifyOTP(email, code)
+      const { token, user } = await verifyOTP(email!, code)
       login(token, user)
 
       if (user.role === "admin") {

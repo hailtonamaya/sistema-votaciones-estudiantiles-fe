@@ -2,15 +2,17 @@ import { useState, type FormEvent } from "react"
 import { useNavigate } from "react-router-dom"
 import { UnitecLogo } from "@/components/UnitecLogo"
 import { OTPInput } from "@/components/student/OTPInput"
+import { useAuth } from "@/context/AuthContext"
 import { useVoting } from "@/context/VotingContext"
-import { verifyStudentOTP, getStudentElection } from "@/services/voting.service"
+import { verifyOTP, getStudentElection } from "@/services/voting.service"
 
 export default function StudentOTPPage() {
   const [digits, setDigits] = useState<string[]>(Array(6).fill(""))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const navigate = useNavigate()
-  const { email, setAuth, setElection, startVoting } = useVoting()
+  const { login } = useAuth()
+  const { email, setElection, startVoting } = useVoting()
 
   if (!email) {
     navigate("/student/login")
@@ -29,9 +31,16 @@ export default function StudentOTPPage() {
 
     let token = ""
     try {
-      const auth = await verifyStudentOTP(email!, code)
-      token = auth.token
-      setAuth(auth.token, auth.student)
+      const { token: t, user } = await verifyOTP(email!, code)
+
+      if (user.role !== "student") {
+        setError("Este portal es exclusivo para estudiantes.")
+        setLoading(false)
+        return
+      }
+
+      token = t
+      login(token, user)
     } catch (err) {
       setError(
         err instanceof Error

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { VotingTimer } from "@/components/student/VotingTimer"
 import {
@@ -5,20 +6,61 @@ import {
   BlankVoteCard,
 } from "@/components/student/AssociationCard"
 import { useVoting } from "@/context/VotingContext"
+import { useAuth } from "@/context/AuthContext"
+import { getStudentElection } from "@/services/voting.service"
 import type { Association } from "@/types/voting"
 
 export default function StudentVotingPage() {
   const navigate = useNavigate()
-  const { election, voteStartTime, selectAssociation } = useVoting()
+  const { election, voteStartTime, setElection, startVoting, selectAssociation } = useVoting()
+  const { token } = useAuth()
+  const [loadError, setLoadError] = useState("")
+  const [loading, setLoading] = useState(false)
 
-  if (!election || !voteStartTime) {
-    navigate("/login")
-    return null
+  useEffect(() => {
+    if (election && voteStartTime) return
+
+    if (!token) {
+      navigate("/login", { replace: true })
+      return
+    }
+
+    setLoading(true)
+    getStudentElection(token)
+      .then((e) => {
+        setElection(e)
+        startVoting()
+      })
+      .catch((err) => {
+        setLoadError(
+          err instanceof Error
+            ? err.message
+            : "No tienes ninguna elección activa habilitada para tu carrera.",
+        )
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#EDF0F5]">
+        <p className="text-sm text-gray-500">Cargando elección...</p>
+      </div>
+    )
   }
+
+  if (loadError) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[#EDF0F5] px-4">
+        <p className="text-center text-sm text-red-500">{loadError}</p>
+      </div>
+    )
+  }
+
+  if (!election || !voteStartTime) return null
 
   function handleSelect(association: Association | "blank") {
     selectAssociation(association)
-    // Blank vote skips the detail page — goes straight to confirmation
     navigate(association === "blank" ? "/student/confirmar" : "/student/detalle")
   }
 

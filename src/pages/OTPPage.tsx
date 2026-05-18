@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { UnitecLogo } from "@/components/UnitecLogo"
 import { OTPInput } from "@/components/student/OTPInput"
 import { useAuth } from "@/context/AuthContext"
-import { useVoting } from "@/context/VotingContext"
-import { verifyOTP, getStudentElection } from "@/services/voting.service"
+import { verifyOTP } from "@/services/voting.service"
 
 export default function OTPPage() {
   const [digits, setDigits] = useState<string[]>(Array(6).fill(""))
@@ -12,7 +11,6 @@ export default function OTPPage() {
   const [error, setError] = useState("")
   const navigate = useNavigate()
   const { pendingEmail, login } = useAuth()
-  const { setElection, startVoting } = useVoting()
 
   // Capturar el email al montar: login() pone pendingEmail=null en el contexto,
   // lo que causaría que el guard de abajo navegue a /login y cancele el redirect
@@ -38,24 +36,12 @@ export default function OTPPage() {
       const { token, user } = await verifyOTP(email, code)
       login(token, user)
 
-      if (user.role === "student") {
-        try {
-          const election = await getStudentElection(token)
-          setElection(election)
-          startVoting()
-          navigate("/student/votar")
-        } catch (err) {
-          setError(
-            err instanceof Error
-              ? err.message
-              : "No se pudo cargar la elección activa.",
-          )
-          setLoading(false)
-        }
-      } else if (user.role === "admin") {
+      if (user.role === "admin") {
         navigate("/admin/dashboard")
       } else if (user.role === "observer") {
         navigate("/observer/dashboard")
+      } else if (user.role === "student") {
+        navigate("/student/votar")
       } else {
         navigate("/login")
       }

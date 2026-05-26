@@ -39,7 +39,6 @@ export default function ObserverDashboard() {
 
   return (
     <DashboardLayout>
-      {/* Bienvenida */}
       <div className="mb-8 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 p-8 text-white shadow-sm">
         <div className="flex items-center justify-between">
           <div>
@@ -68,7 +67,6 @@ export default function ObserverDashboard() {
           </div>
         </div>
 
-        {/* Acceso restringido */}
         <div className="mt-6 flex items-center gap-3">
           <div className="flex items-center gap-2">
             <span className="flex h-2 w-2 rounded-full bg-green-400" />
@@ -87,7 +85,6 @@ export default function ObserverDashboard() {
         </div>
       </div>
 
-      {/* Aviso de permisos */}
       <div className="mb-8 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
         <svg
           className="mt-0.5 shrink-0 text-emerald-600"
@@ -114,7 +111,6 @@ export default function ObserverDashboard() {
         </div>
       </div>
 
-      {/* Módulos disponibles */}
       <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-400">
         Módulos disponibles
       </h2>
@@ -176,7 +172,6 @@ export default function ObserverDashboard() {
         />
       </div>
 
-      {/* Footer info */}
       <div className="mt-10 rounded-xl border border-gray-200 bg-white p-4">
         <p className="text-center text-xs text-gray-400">
           Sistema de Votaciones Estudiantiles · UNITEC ·{" "}

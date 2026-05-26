@@ -36,10 +36,8 @@ export function DashboardLayout({ children }: Props) {
 
   return (
     <div className="min-h-screen bg-[#EDF0F5]">
-      {/* Header */}
       <header className="bg-[#1B2770] shadow-lg">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          {/* Logo + sistema */}
           <div className="flex items-center gap-4">
             <img
               src="/unitec-logo.png"
@@ -53,7 +51,6 @@ export function DashboardLayout({ children }: Props) {
             </div>
           </div>
 
-          {/* Usuario */}
           <div className="flex items-center gap-3">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-semibold text-white">{user?.name}</p>
@@ -92,14 +89,12 @@ export function DashboardLayout({ children }: Props) {
         </div>
       </header>
 
-      {/* Barra de fecha */}
       <div className="border-b border-[#1B2770]/10 bg-white px-6 py-2">
         <p className="mx-auto max-w-7xl text-xs capitalize text-gray-400">
           {dateStr}
         </p>
       </div>
 
-      {/* Contenido */}
       <main className="mx-auto max-w-7xl px-6 py-10">{children}</main>
     </div>
   )

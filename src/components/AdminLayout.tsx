@@ -25,12 +25,6 @@ import {
   Users,
 } from "lucide-react"
 
-// ── Brand colors (UNITEC Manual de Marca) ──────────────────
-// Federal Blue  #06065C  — primary dark
-// Cobalt Blue   #0F49B6  — primary medium
-// Pacific Cyan  #03AED2  — secondary
-// Vivid Sky Blue #47C8F0 — accent
-
 interface NavChild {
   label: string
   icon: React.ReactNode
@@ -115,7 +109,6 @@ export function AdminLayout({ children }: Props) {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024)
 
-  // Track breakpoint changes
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 1024px)")
     const handler = (e: MediaQueryListEvent) => {
@@ -126,7 +119,6 @@ export function AdminLayout({ children }: Props) {
     return () => mq.removeEventListener("change", handler)
   }, [])
 
-  // Close mobile drawer on navigation
   useEffect(() => {
     setMobileOpen(false)
   }, [location.pathname])
@@ -153,9 +145,8 @@ export function AdminLayout({ children }: Props) {
   const sidebarWidth = isDesktop && sidebarCollapsed ? "64px" : "256px"
 
   return (
-    <div className="flex min-h-screen bg-[#EDF0F5]" style={{ fontFamily: "'Poppins', sans-serif" }}>
+    <div className="flex h-screen bg-[#EDF0F5]" style={{ fontFamily: "'Poppins', sans-serif" }}>
 
-      {/* Mobile backdrop */}
       {mobileOpen && (
         <div
           className="fixed inset-0 z-40"
@@ -164,7 +155,6 @@ export function AdminLayout({ children }: Props) {
         />
       )}
 
-      {/* ── Sidebar ── */}
       <aside
         className={`flex flex-shrink-0 flex-col transition-all duration-300 ${!isDesktop ? "fixed inset-y-0 left-0 z-50" : ""}`}
         style={{
@@ -173,7 +163,6 @@ export function AdminLayout({ children }: Props) {
           transform: !isDesktop ? (mobileOpen ? "translateX(0)" : "translateX(-100%)") : undefined,
         }}
       >
-        {/* Logo + collapse/close button — always horizontal */}
         <div
           className="flex items-center justify-between"
           style={{ padding: showLabels ? "16px 14px" : "12px 5px", minHeight: showLabels ? "88px" : "60px" }}
@@ -210,7 +199,6 @@ export function AdminLayout({ children }: Props) {
           </button>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-2 pb-2">
           {NAV.map((section) => (
             <div key={section.key} className="mb-0.5">
@@ -281,7 +269,6 @@ export function AdminLayout({ children }: Props) {
           ))}
         </nav>
 
-        {/* Bottom: expandable user menu + user card */}
         <div className="px-2 pb-5 pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}>
           {showLabels && userMenuOpen && (
             <div className="mb-1 space-y-0.5">
@@ -342,10 +329,8 @@ export function AdminLayout({ children }: Props) {
         </div>
       </aside>
 
-      {/* ── Main area ── */}
-      <div className="flex flex-1 flex-col min-w-0">
+      <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
 
-        {/* Mobile top bar — hidden on desktop */}
         <div
           className="flex items-center gap-3 lg:hidden"
           style={{
@@ -365,8 +350,13 @@ export function AdminLayout({ children }: Props) {
           </button>
         </div>
 
-        <main className="flex-1 p-4 md:p-6 lg:p-8">{children}</main>
-        <footer className="py-4 text-center text-xs text-gray-400">© 2026 UNITEC</footer>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+          {children}
+          <footer className="mt-8 py-4 text-center text-xs text-gray-400">© 2026 UNITEC</footer>
+        </main>
+
+        {/* Portal target for wizard action bar — empty on non-wizard pages */}
+        <div id="admin-wizard-footer" className="flex-shrink-0" />
       </div>
     </div>
   )

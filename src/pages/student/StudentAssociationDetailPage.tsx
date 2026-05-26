@@ -55,7 +55,6 @@ export default function StudentAssociationDetailPage() {
 
   return (
     <div className="min-h-screen bg-[#EDF0F5]">
-      {/* Top bar */}
       <div className="flex items-center justify-between px-6 py-4">
         <button
           onClick={() => navigate("/student/votar")}
@@ -78,7 +77,6 @@ export default function StudentAssociationDetailPage() {
         <VotingTimer startTime={voteStartTime} />
       </div>
 
-      {/* Hero banner */}
       <div className="relative mx-6 overflow-hidden rounded-2xl bg-slate-200 shadow-sm">
         {selectedAssociation.photoUrl ? (
           <img
@@ -103,7 +101,6 @@ export default function StudentAssociationDetailPage() {
             </svg>
           </div>
         )}
-        {/* Name overlay */}
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent px-6 pb-5 pt-12">
           <p className="text-xl font-bold text-white">
             {selectedAssociation.name}
@@ -114,7 +111,6 @@ export default function StudentAssociationDetailPage() {
         </div>
       </div>
 
-      {/* Candidates section */}
       <div className="mx-6 mt-8 pb-32">
         <h2 className="mb-1 text-2xl font-bold text-[#1B2770]">Candidatos</h2>
         <div className="mb-6 h-0.5 w-20 bg-[#1B2770]" />
@@ -126,7 +122,6 @@ export default function StudentAssociationDetailPage() {
         </div>
       </div>
 
-      {/* Sticky vote button */}
       <div className="fixed bottom-0 left-0 right-0 bg-[#EDF0F5]/90 px-6 py-4 backdrop-blur-sm">
         <button
           onClick={() => navigate("/student/confirmar")}

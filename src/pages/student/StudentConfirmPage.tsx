@@ -5,6 +5,7 @@ import { UnitecLogo } from "@/components/UnitecLogo"
 import { useVoting } from "@/context/VotingContext"
 import { useAuth } from "@/context/AuthContext"
 import { castVote } from "@/services/voting.service"
+import type { Association } from "@/types/voting"
 
 export default function StudentConfirmPage() {
   const [loading, setLoading] = useState(false)
@@ -39,7 +40,7 @@ export default function StudentConfirmPage() {
       const result = await castVote(
         {
           electionId: election!.id,
-          associationId: isBlank ? null : selectedAssociation !== "blank" ? selectedAssociation.id : null,
+          associationId: isBlank ? null : (selectedAssociation as Association).id,
         },
         token!,
         election!.title,
@@ -59,7 +60,6 @@ export default function StudentConfirmPage() {
 
   return (
     <div className="min-h-screen bg-[#EDF0F5]">
-      {/* Top bar */}
       <div className="flex items-center justify-between px-6 py-4">
         <button
           onClick={() => navigate("/student/votar")}
@@ -82,9 +82,7 @@ export default function StudentConfirmPage() {
         <VotingTimer startTime={voteStartTime} />
       </div>
 
-      {/* Content */}
       <div className="mx-auto max-w-2xl px-6 pb-12">
-        {/* Association photo */}
         <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
           {photoUrl ? (
             <img
@@ -115,7 +113,6 @@ export default function StudentConfirmPage() {
           )}
         </div>
 
-        {/* Confirmation text */}
         <div className="mt-8 text-center">
           <h2 className="text-2xl font-bold text-[#1B2770]">
             ¿Confirmar Voto?
@@ -131,7 +128,6 @@ export default function StudentConfirmPage() {
           <p className="mt-4 text-center text-sm text-red-500">{error}</p>
         )}
 
-        {/* Action buttons */}
         <div className="mt-8 grid grid-cols-2 gap-4">
           <button
             onClick={handleConfirm}

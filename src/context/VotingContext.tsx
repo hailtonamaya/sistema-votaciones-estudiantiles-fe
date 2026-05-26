@@ -7,6 +7,7 @@ import {
 import type { Association, Election, VoteResult } from "@/types/voting"
 
 interface VotingState {
+  email: string | null
   election: Election | null
   selectedAssociation: Association | "blank" | null
   voteStartTime: Date | null
@@ -14,6 +15,7 @@ interface VotingState {
 }
 
 interface VotingActions {
+  setEmail: (email: string) => void
   setElection: (election: Election) => void
   startVoting: () => void
   selectAssociation: (association: Association | "blank") => void
@@ -22,6 +24,7 @@ interface VotingActions {
 }
 
 const initialState: VotingState = {
+  email: null,
   election: null,
   selectedAssociation: null,
   voteStartTime: null,
@@ -34,6 +37,8 @@ export function VotingProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<VotingState>(initialState)
 
   const actions: VotingActions = {
+    setEmail: (email) => setState((s) => ({ ...s, email })),
+
     setElection: (election) => setState((s) => ({ ...s, election })),
 
     startVoting: () =>

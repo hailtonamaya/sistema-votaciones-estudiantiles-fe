@@ -16,6 +16,14 @@ import StudentConfirmPage from "@/pages/student/StudentConfirmPage"
 import StudentSuccessPage from "@/pages/student/StudentSuccessPage"
 
 import AdminPlaceholder from "@/pages/admin/AdminPlaceholder"
+import AdminEleccionesDetalles from "@/pages/admin/AdminEleccionesDetalles"
+import AdminEleccionWizard from "@/pages/admin/AdminEleccionWizard"
+import AdminEleccionAsociaciones from "@/pages/admin/AdminEleccionAsociaciones"
+import AdminEleccionCandidatos from "@/pages/admin/AdminEleccionCandidatos"
+import AdminEleccionVotantes from "@/pages/admin/AdminEleccionVotantes"
+import AdminGestionUsuarios from "@/pages/admin/AdminGestionUsuarios"
+import AdminBancoCampus from "@/pages/admin/AdminBancoCampus"
+import AdminBancoCarreras from "@/pages/admin/AdminBancoCarreras"
 
 export default function App() {
   return (
@@ -46,14 +54,49 @@ export default function App() {
               }
             />
 
-            {[
-              "detalles",
-              "asociaciones",
-              "candidatos",
-              "votantes",
-              "revision",
-              "resultados",
-            ].map((slug) => (
+            <Route
+              path="/admin/elecciones/detalles"
+              element={
+                <ProtectedRoute roles={["admin"]}>
+                  <AdminEleccionesDetalles />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/elecciones/wizard"
+              element={
+                <ProtectedRoute roles={["admin"]}>
+                  <AdminEleccionWizard />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/elecciones/asociaciones"
+              element={
+                <ProtectedRoute roles={["admin"]}>
+                  <AdminEleccionAsociaciones />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/elecciones/candidatos"
+              element={
+                <ProtectedRoute roles={["admin"]}>
+                  <AdminEleccionCandidatos />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/elecciones/votantes"
+              element={
+                <ProtectedRoute roles={["admin"]}>
+                  <AdminEleccionVotantes />
+                </ProtectedRoute>
+              }
+            />
+            {["revision", "resultados"].map((slug) => (
               <Route
                 key={slug}
                 path={`/admin/elecciones/${slug}`}
@@ -67,11 +110,33 @@ export default function App() {
               />
             ))}
 
+            <Route
+              path="/admin/configuracion/usuarios"
+              element={
+                <ProtectedRoute roles={["admin"]}>
+                  <AdminGestionUsuarios />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/configuracion/campus"
+              element={
+                <ProtectedRoute roles={["admin"]}>
+                  <AdminBancoCampus />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/configuracion/carreras"
+              element={
+                <ProtectedRoute roles={["admin"]}>
+                  <AdminBancoCarreras />
+                </ProtectedRoute>
+              }
+            />
+
             {[
               { slug: "perfil", title: "Mi Perfil" },
-              { slug: "usuarios", title: "Gestión de Usuarios" },
-              { slug: "carreras", title: "Banco de Carreras" },
-              { slug: "campus", title: "Banco de Campus" },
               { slug: "parametros", title: "Parámetros Globales" },
             ].map(({ slug, title }) => (
               <Route

@@ -1,5 +1,13 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { AdminLayout } from "@/components/AdminLayout"
+import { useAuth } from "@/context/AuthContext"
+import {
+  type ApiElection,
+  type ApiCareer,
+  listElections,
+  listCareers,
+} from "@/services/admin.service"
 import {
   BarChart2,
   ChevronDown,
@@ -8,21 +16,22 @@ import {
   Landmark,
   LayoutDashboard,
   ListOrdered,
+  Loader2,
   Play,
   Plus,
   TrendingUp,
 } from "lucide-react"
 
-const CARRERAS = [
-  "Ingeniería en Sistemas",
-  "Administración de Empresas",
-  "Derecho",
-  "Medicina",
-  "Animación Digital y Diseño Interactivo",
-  "Ciencia de Datos e Inteligencia Artificial",
-]
+const BRAND = "#06065C"
+const ACCENT = "#03AED2"
 
-const MOCK_HAS_ACTIVE_ELECTION = true
+const STATUS_LABELS: Record<string, string> = {
+  open: "Activa",
+  closed: "Finalizada",
+  draft: "Borrador",
+  scheduled: "Programada",
+  cancelled: "Archivada",
+}
 
 function LineChart() {
   const pts: [number, number][] = [
@@ -35,8 +44,8 @@ function LineChart() {
       {[0, 50, 100, 150, 200].map((y) => (
         <line key={y} x1="0" y1={y} x2="380" y2={y} stroke="#e5e7eb" strokeWidth="1" strokeDasharray="4" />
       ))}
-      <path d={d} fill="none" stroke="#06065C" strokeWidth="2.5" strokeLinecap="round" />
-      {pts.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="4" fill="#06065C" />)}
+      <path d={d} fill="none" stroke={BRAND} strokeWidth="2.5" strokeLinecap="round" />
+      {pts.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="4" fill={BRAND} />)}
     </svg>
   )
 }
@@ -45,7 +54,7 @@ function BarChartSvg() {
   const bars = [
     { value: 55, color: "#47C8F0" },
     { value: 70, color: "#47C8F0" },
-    { value: 120, color: "#03AED2" },
+    { value: 120, color: ACCENT },
   ]
   return (
     <svg viewBox="0 0 360 200" className="w-full">
@@ -62,9 +71,9 @@ function BarChartSvg() {
 
 function StackedBarChartSvg() {
   const bars = [
-    { segs: [{ color: "#03AED2", val: 50 }] },
+    { segs: [{ color: ACCENT, val: 50 }] },
     { segs: [{ color: "#47C8F0", val: 60 }] },
-    { segs: [{ color: "#06065C", val: 70 }, { color: "#0F49B6", val: 60 }] },
+    { segs: [{ color: BRAND, val: 70 }, { color: "#0F49B6", val: 60 }] },
   ]
   return (
     <svg viewBox="0 0 360 200" className="w-full">
@@ -104,11 +113,11 @@ function ChartCard({ title, subtitle, icon, yLabels, xLabels, chart }: ChartCard
     <div className="rounded-2xl bg-white p-5 shadow-sm">
       <div className="mb-3 flex items-start justify-between">
         <div>
-          <p className="text-sm font-semibold" style={{ color: "#06065C" }}>{title}</p>
+          <p className="text-sm font-semibold" style={{ color: BRAND }}>{title}</p>
           <p className="text-xs text-gray-400">{subtitle}</p>
         </div>
         <div className="flex h-9 w-9 items-center justify-center rounded-xl"
-          style={{ backgroundColor: "#EDF0F5", color: "#06065C" }}>
+          style={{ backgroundColor: "#EDF0F5", color: BRAND }}>
           {icon}
         </div>
       </div>
@@ -125,12 +134,43 @@ function ChartCard({ title, subtitle, icon, yLabels, xLabels, chart }: ChartCard
   )
 }
 
+function StatCard({ label, value, color }: { label: string; value: number | string; color: string }) {
+  return (
+    <div className="rounded-2xl bg-white p-5 shadow-sm">
+      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{label}</p>
+      <p className="mt-1 text-3xl font-bold" style={{ color }}>{value}</p>
+    </div>
+  )
+}
+
 export default function AdminDashboard() {
+  const { token } = useAuth()
+  const navigate = useNavigate()
+  const [elections, setElections] = useState<ApiElection[]>([])
+  const [careers, setCareers] = useState<ApiCareer[]>([])
+  const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("dashboard")
-  const [selectedCarrera, setSelectedCarrera] = useState("")
+  const [selectedCareer, setSelectedCareer] = useState("")
   const [carreraOpen, setCarreraOpen] = useState(false)
   const [accionesOpen, setActionsOpen] = useState(false)
-  const hasActiveElection = MOCK_HAS_ACTIVE_ELECTION
+
+  useEffect(() => {
+    Promise.all([
+      listElections(token!),
+      listCareers(token!),
+    ])
+      .then(([elecs, carrs]) => {
+        setElections(elecs)
+        setCareers(carrs)
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [token])
+
+  const activeElections = elections.filter((e) => e.status === "open")
+  const scheduledElections = elections.filter((e) => e.status === "scheduled")
+  const hasActiveElection = activeElections.length > 0
+  const currentElection = activeElections[0] ?? scheduledElections[0] ?? null
 
   const tabs = [
     { id: "dashboard", label: "Dashboard General", icon: <LayoutDashboard size={15} /> },
@@ -138,52 +178,83 @@ export default function AdminDashboard() {
     { id: "escrutinio", label: "Tabla de Escrutinio", icon: <FileText size={15} /> },
   ]
 
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 size={28} className="animate-spin text-gray-400" />
+        </div>
+      </AdminLayout>
+    )
+  }
+
   return (
     <AdminLayout>
       <div className="mb-5">
-        <h1 className="text-2xl font-bold" style={{ color: "#06065C" }}>
-          Dashboard General - Elecciones 2026
+        <h1 className="text-2xl font-bold" style={{ color: BRAND }}>
+          {currentElection ? `Dashboard — ${currentElection.title}` : "Dashboard General"}
         </h1>
         <p className="mt-1 text-sm text-gray-500">
-          Aquí podrás ver el progreso de las elecciones.
+          {currentElection
+            ? `Estado: ${STATUS_LABELS[currentElection.status] ?? currentElection.status}`
+            : "Aquí podrás ver el progreso de las elecciones."}
         </p>
       </div>
 
+      {/* Quick stats */}
+      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <StatCard label="Total Elecciones" value={elections.length} color={BRAND} />
+        <StatCard label="Activas" value={activeElections.length} color="#16A34A" />
+        <StatCard label="Programadas" value={scheduledElections.length} color="#1D4ED8" />
+        <StatCard label="Carreras" value={careers.length} color={ACCENT} />
+      </div>
+
+      {/* Toolbar */}
       <div className="mb-5 flex flex-wrap items-center gap-3">
         {hasActiveElection && (
           <div className="flex items-center gap-2 rounded-full border border-green-400 px-4 py-1.5">
             <Play size={12} className="fill-green-500 text-green-500" />
-            <span className="text-sm font-semibold text-green-600">Activa</span>
+            <span className="text-sm font-semibold text-green-600">
+              {activeElections.length === 1 ? "1 Elección Activa" : `${activeElections.length} Elecciones Activas`}
+            </span>
           </div>
         )}
 
         <div className="ml-auto flex flex-wrap items-center gap-3">
+          {/* Career selector */}
           <div className="relative">
             <button
               onClick={() => { setCarreraOpen((p) => !p); setActionsOpen(false) }}
               className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 shadow-sm transition hover:border-gray-300"
             >
               <span className="max-w-[160px] truncate sm:max-w-[220px]">
-                {selectedCarrera || "Selecciona una carrera"}
+                {careers.find((c) => c.career_id === selectedCareer)?.name ?? "Selecciona una carrera"}
               </span>
               <ChevronDown size={15} />
             </button>
             {carreraOpen && (
-              <div className="absolute right-0 top-full z-10 mt-1 w-64 rounded-xl border border-gray-100 bg-white shadow-lg">
-                {CARRERAS.map((c) => (
-                  <button key={c} onClick={() => { setSelectedCarrera(c); setCarreraOpen(false) }}
-                    className="block w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-xl last:rounded-b-xl">
-                    {c}
-                  </button>
-                ))}
+              <div className="absolute right-0 top-full z-10 mt-1 max-h-60 w-64 overflow-y-auto rounded-xl border border-gray-100 bg-white shadow-lg">
+                {careers.length === 0 ? (
+                  <p className="px-4 py-3 text-sm text-gray-400">Sin carreras registradas</p>
+                ) : (
+                  careers.map((c) => (
+                    <button
+                      key={c.career_id}
+                      onClick={() => { setSelectedCareer(c.career_id); setCarreraOpen(false) }}
+                      className="block w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-xl last:rounded-b-xl"
+                    >
+                      {c.name} <span className="text-xs text-gray-400">({c.code})</span>
+                    </button>
+                  ))
+                )}
               </div>
             )}
           </div>
 
           <button
-            disabled={!hasActiveElection}
+            disabled={!hasActiveElection || !selectedCareer}
             className="rounded-lg px-5 py-2 text-sm font-semibold text-white transition"
-            style={{ backgroundColor: hasActiveElection ? "#06065C" : "#9ca3af" }}
+            style={{ backgroundColor: hasActiveElection && selectedCareer ? BRAND : "#9ca3af" }}
           >
             Simular
           </button>
@@ -205,6 +276,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      {/* Tabs */}
       <div className="mb-6 flex w-full overflow-x-auto pb-1 sm:w-fit sm:pb-0">
         <div className="flex items-center gap-2 rounded-xl bg-white p-1.5 shadow-sm whitespace-nowrap">
           {tabs.map((tab) => (
@@ -214,8 +286,8 @@ export default function AdminDashboard() {
               className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition"
               style={
                 activeTab === tab.id
-                  ? { backgroundColor: "#06065C", color: "#ffffff" }
-                  : { color: "#06065C" }
+                  ? { backgroundColor: BRAND, color: "#ffffff" }
+                  : { color: BRAND }
               }
             >
               {tab.icon}
@@ -225,46 +297,72 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      {/* Tab content */}
       {activeTab === "dashboard" && (
         !hasActiveElection ? (
           <div className="flex min-h-[360px] items-center justify-center rounded-2xl bg-white shadow-sm">
             <div className="flex flex-col items-center gap-4 px-8 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-full"
                 style={{ backgroundColor: "#EDF0F5" }}>
-                <Landmark size={32} style={{ color: "#06065C" }} />
+                <Landmark size={32} style={{ color: BRAND }} />
               </div>
               <div>
-                <h2 className="text-lg font-bold" style={{ color: "#06065C" }}>
-                  Aún no hay elecciones activas
+                <h2 className="text-lg font-bold" style={{ color: BRAND }}>
+                  {elections.length === 0 ? "Aún no hay elecciones" : "No hay elecciones activas"}
                 </h2>
                 <p className="mt-1 text-sm text-gray-400">
-                  Crea una nueva eleccion para ver el progreso en el dashboard
+                  {elections.length === 0
+                    ? "Crea una nueva elección para empezar"
+                    : `Tienes ${elections.length} elección(es) en total. Activa una para ver el dashboard.`}
                 </p>
               </div>
               <button
-                className="flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition"
-                style={{ backgroundColor: "#06065C" }}
+                onClick={() => navigate("/admin/elecciones/wizard?step=1")}
+                className="flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+                style={{ backgroundColor: BRAND }}
               >
                 <Plus size={16} />
                 Nueva Elección
               </button>
+              {elections.length > 0 && (
+                <button
+                  onClick={() => navigate("/admin/elecciones/detalles")}
+                  className="text-sm font-medium underline-offset-2 hover:underline"
+                  style={{ color: BRAND }}
+                >
+                  Ver todas las elecciones
+                </button>
+              )}
             </div>
           </div>
         ) : (
           <div className="space-y-5">
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-              <ChartCard title="Participación por Hora" subtitle="Votos acumulados durante la jornada"
-                icon={<TrendingUp size={18} />} yLabels={["200", "150", "100", "50", "0"]}
-                xLabels={["08:00", "10:00", "12:00", "14:00", "16:00"]} chart={<LineChart />} />
-              <ChartCard title="Votos por carrera" subtitle="Facultades con mayor participación"
-                icon={<GraduationCap size={18} />} yLabels={["200", "150", "100", "50", "0"]}
-                xLabels={["Animación Digital", "Ciencia de Datos", "Ingeniería"]} chart={<BarChartSvg />} />
+              <ChartCard
+                title="Participación por Hora"
+                subtitle="Votos acumulados durante la jornada"
+                icon={<TrendingUp size={18} />}
+                yLabels={["200", "150", "100", "50", "0"]}
+                xLabels={["08:00", "10:00", "12:00", "14:00", "16:00"]}
+                chart={<LineChart />}
+              />
+              <ChartCard
+                title="Votos por Carrera"
+                subtitle="Facultades con mayor participación"
+                icon={<GraduationCap size={18} />}
+                yLabels={["200", "150", "100", "50", "0"]}
+                xLabels={careers.slice(0, 3).map((c) => c.code)}
+                chart={<BarChartSvg />}
+              />
             </div>
-            <ChartCard title="Distribución de Votos: Carrera y Planilla"
+            <ChartCard
+              title="Distribución de Votos: Carrera y Planilla"
               subtitle="Preferencias de asociación por facultad"
-              icon={<BarChart2 size={18} />} yLabels={["200", "150", "100", "50", "0"]}
-              xLabels={["Animación Digital", "Ciencia de Datos", "Ingeniería en Sistemas"]}
-              chart={<StackedBarChartSvg />} />
+              icon={<BarChart2 size={18} />}
+              yLabels={["200", "150", "100", "50", "0"]}
+              xLabels={careers.slice(0, 3).map((c) => c.name.split(" ").slice(0, 2).join(" "))}
+              chart={<StackedBarChartSvg />}
+            />
           </div>
         )
       )}

@@ -119,9 +119,8 @@ export function AdminLayout({ children }: Props) {
     return () => mq.removeEventListener("change", handler)
   }, [])
 
-  useEffect(() => {
-    setMobileOpen(false)
-  }, [location.pathname])
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setMobileOpen(false) }, [location.pathname])
 
   function toggle(key: string) {
     setExpanded((prev) => ({ ...prev, [key]: !prev[key] }))
@@ -335,7 +334,7 @@ export function AdminLayout({ children }: Props) {
           className="flex items-center gap-3 lg:hidden"
           style={{
             backgroundColor: "#06065C",
-            padding: "12px 16px",
+            padding: "10px 16px",
             flexShrink: 0,
           }}
         >
@@ -348,6 +347,12 @@ export function AdminLayout({ children }: Props) {
           >
             <Menu size={22} />
           </button>
+          <img
+            src="/unitec_logo_2.png"
+            alt="UNITEC"
+            className="h-7 object-contain object-left"
+            style={{ maxWidth: "140px" }}
+          />
         </div>
 
         <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">

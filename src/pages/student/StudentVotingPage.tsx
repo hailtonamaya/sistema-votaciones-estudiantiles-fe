@@ -25,6 +25,7 @@ export default function StudentVotingPage() {
       return
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     getStudentElection(token)
       .then((e) => {
@@ -39,6 +40,7 @@ export default function StudentVotingPage() {
         )
       })
       .finally(() => setLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   if (loading) {
@@ -70,7 +72,7 @@ export default function StudentVotingPage() {
         <VotingTimer startTime={voteStartTime} />
       </div>
 
-      <div className="mx-auto max-w-5xl px-6 pb-12">
+      <div className="mx-auto max-w-5xl px-4 pb-12 sm:px-6">
         <p className="mb-2 text-sm font-bold text-[#1B2770]">
           {election.title} / {election.careerName}
         </p>

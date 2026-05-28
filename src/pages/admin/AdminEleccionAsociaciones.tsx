@@ -13,7 +13,6 @@ import {
   listElections,
 } from "@/services/admin.service"
 import {
-  AlertCircle,
   Download,
   Filter,
   ImageIcon,
@@ -27,18 +26,10 @@ import {
   Users,
   X,
 } from "lucide-react"
+import { ErrorBanner } from "@/components/ErrorBanner"
 
 const BRAND = "#06065C"
 const ACCENT = "#03AED2"
-
-function ErrorBanner({ message }: { message: string }) {
-  return (
-    <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-      <AlertCircle size={16} className="flex-shrink-0" />
-      {message}
-    </div>
-  )
-}
 
 export default function AdminEleccionAsociaciones() {
   const { token } = useAuth()
@@ -67,6 +58,7 @@ export default function AdminEleccionAsociaciones() {
       .finally(() => setLoadingElections(false))
   }, [token])
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!selectedId) { setAssociations([]); return }
     setLoading(true)
@@ -75,6 +67,7 @@ export default function AdminEleccionAsociaciones() {
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [selectedId, token])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function selectElection(id: string) {
     setSearchParams(id ? { election_id: id } : {}, { replace: true })

@@ -64,6 +64,7 @@ export default function AdminEleccionRevision() {
       .finally(() => setLoadingElections(false))
   }, [token])
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!selectedId) {
       setElection(null)
@@ -85,6 +86,7 @@ export default function AdminEleccionRevision() {
       setCareers(c)
     }).catch(() => {}).finally(() => setLoading(false))
   }, [selectedId, token])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function selectElection(id: string) {
     setSearchParams(id ? { election_id: id } : {}, { replace: true })
@@ -178,23 +180,25 @@ export default function AdminEleccionRevision() {
           <Loader2 size={24} className="animate-spin text-gray-400" />
         </div>
       ) : (
-        <div className="max-w-3xl rounded-2xl bg-white p-8 shadow-sm space-y-8">
+        <div className="w-full rounded-2xl bg-white p-5 shadow-sm space-y-8 sm:p-8">
           {/* Summary */}
           <div>
             <h2 className="mb-4 text-lg font-bold" style={{ color: BRAND }}>Resumen de Elección</h2>
             <div className="space-y-4">
               {rows.map((row) => (
-                <div key={row.label} className="flex items-center gap-4">
+                <div key={row.label} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
                   <p className="flex-1 text-sm text-gray-700">{row.label}</p>
-                  <span className="text-sm text-gray-400 min-w-[80px] text-right">{row.detail}</span>
-                  <button
-                    onClick={row.onVerify}
-                    className="rounded-lg px-5 py-2 text-sm font-semibold text-white transition hover:opacity-90"
-                    style={{ backgroundColor: BRAND }}
-                  >
-                    Verificar
-                  </button>
-                  <StatusBadge status={row.status as RevisionStatus} />
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-gray-400">{row.detail}</span>
+                    <button
+                      onClick={row.onVerify}
+                      className="rounded-lg px-5 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+                      style={{ backgroundColor: BRAND }}
+                    >
+                      Verificar
+                    </button>
+                    <StatusBadge status={row.status as RevisionStatus} />
+                  </div>
                 </div>
               ))}
             </div>
@@ -203,11 +207,11 @@ export default function AdminEleccionRevision() {
           {/* Simulate voting */}
           <div>
             <h2 className="mb-4 text-lg font-bold" style={{ color: BRAND }}>Probar experiencia de votación</h2>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <select
                 value={simulateCareer}
                 onChange={(e) => setSimulateCareer(e.target.value)}
-                className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-blue-400"
+                className="flex-1 min-w-[200px] rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-blue-400"
               >
                 <option value="">Selecciona una carrera para simular</option>
                 {careers.map((c) => (
@@ -227,7 +231,7 @@ export default function AdminEleccionRevision() {
 
           {/* Election status + activate button */}
           {election && (
-            <div className="flex items-center justify-between rounded-xl bg-gray-50 px-5 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-gray-50 px-5 py-4">
               <p className="text-sm text-gray-600">
                 Estado actual:{" "}
                 <span className="font-semibold" style={{ color: BRAND }}>

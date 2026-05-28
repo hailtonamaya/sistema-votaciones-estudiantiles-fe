@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 import { AdminLayout } from "@/components/AdminLayout"
 import { useAuth } from "@/context/AuthContext"
@@ -6,54 +6,59 @@ import {
   type ApiCareer,
   type ApiElection,
   type ApiVoter,
+  type ImportVoterRow,
+  type ImportVotersResult,
   createVoter,
   deleteVoter,
+  importVoters,
   listCareers,
   listElections,
   listVoters,
 } from "@/services/admin.service"
 import {
-  AlertCircle,
-  Download,
-  Filter,
-  LayoutGrid,
-  List,
+  CheckCircle2,
   Loader2,
   Plus,
   Save,
   Search,
   Trash2,
+  Upload,
   Users,
   X,
 } from "lucide-react"
+import { ErrorBanner } from "@/components/ErrorBanner"
 
 const BRAND = "#06065C"
 const ACCENT = "#03AED2"
 
-function ErrorBanner({ message }: { message: string }) {
-  return (
-    <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-      <AlertCircle size={16} className="flex-shrink-0" />
-      {message}
-    </div>
-  )
+function parseCSV(text: string): string[][] {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.split(",").map((c) => c.trim()))
+    .filter((row) => row.some((c) => c !== ""))
 }
 
 export default function AdminEleccionVotantes() {
   const { token } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const [elections, setElections] = useState<ApiElection[]>([])
   const [careers, setCareers] = useState<ApiCareer[]>([])
   const [voters, setVoters] = useState<ApiVoter[]>([])
   const [loadingElections, setLoadingElections] = useState(true)
   const [loading, setLoading] = useState(false)
-  const [view, setView] = useState<"grid" | "list">("list")
   const [search, setSearch] = useState("")
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState({ full_name: "", institutional_id: "", email: "", career_id: "" })
+
+  // CSV import state
+  const [importRows, setImportRows] = useState<ImportVoterRow[] | null>(null)
+  const [importParseErrors, setImportParseErrors] = useState<string[]>([])
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState<ImportVotersResult | null>(null)
 
   const selectedId = searchParams.get("election_id") ?? ""
 
@@ -62,8 +67,10 @@ export default function AdminEleccionVotantes() {
       .then(([el, ca]) => { setElections(el); setCareers(ca) })
       .catch(() => {})
       .finally(() => setLoadingElections(false))
-  }, [token])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!selectedId) { setVoters([]); return }
     setLoading(true)
@@ -72,16 +79,19 @@ export default function AdminEleccionVotantes() {
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [selectedId, token])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function selectElection(id: string) {
     setSearchParams(id ? { election_id: id } : {}, { replace: true })
     setShowForm(false)
     setError(null)
+    setImportRows(null)
+    setImportResult(null)
   }
 
-  function getVoterName(v: ApiVoter) { return v.full_name ?? v.student?.user?.full_name ?? "—" }
-  function getVoterEmail(v: ApiVoter) { return v.email ?? v.student?.user?.email ?? "—" }
-  function getVoterAccount(v: ApiVoter) { return v.institutional_id ?? v.student?.institutional_id ?? "—" }
+  function getVoterName(v: ApiVoter) { return v.voter?.full_name ?? "—" }
+  function getVoterEmail(v: ApiVoter) { return v.voter?.email ?? "—" }
+  function getVoterAccount(v: ApiVoter) { return v.voter?.institutional_id ?? "—" }
   function getVoterCareer(v: ApiVoter) { return v.career?.name ?? "—" }
 
   async function handleCreate() {
@@ -115,6 +125,65 @@ export default function AdminEleccionVotantes() {
       setVoters((prev) => prev.filter((v) => v.election_voter_id !== id))
     } catch (e) {
       alert(e instanceof Error ? e.message : "Error al eliminar")
+    }
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ""
+
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string
+      const lines = parseCSV(text)
+      if (lines.length < 2) {
+        setImportParseErrors(["El archivo CSV está vacío o no tiene filas de datos."])
+        setImportRows(null)
+        return
+      }
+
+      const [, ...dataRows] = lines // skip header row
+      const errs: string[] = []
+      const rows: ImportVoterRow[] = []
+
+      dataRows.forEach((cols, i) => {
+        const [institutional_id, full_name, email, career_code] = cols
+        if (!institutional_id || !full_name || !email || !career_code) {
+          errs.push(`Fila ${i + 2}: faltan columnas (se esperan: numero_cuenta, nombre_completo, correo, codigo_carrera)`)
+          return
+        }
+        const career = careers.find(
+          (c) => c.code.toLowerCase() === career_code.toLowerCase(),
+        )
+        if (!career) {
+          errs.push(`Fila ${i + 2}: código de carrera desconocido "${career_code}"`)
+          return
+        }
+        rows.push({ institutional_id, full_name, email, career_id: career.career_id })
+      })
+
+      setImportParseErrors(errs)
+      setImportRows(rows.length > 0 ? rows : null)
+      setImportResult(null)
+    }
+    reader.readAsText(file)
+  }
+
+  async function handleImportConfirm() {
+    if (!importRows?.length) return
+    setImporting(true)
+    try {
+      const result = await importVoters(token!, selectedId, importRows)
+      setImportResult(result)
+      setImportRows(null)
+      // Reload voter list after import
+      const updated = await listVoters(token!, selectedId)
+      setVoters(updated)
+    } catch (e) {
+      setImportParseErrors([e instanceof Error ? e.message : "Error al importar"])
+    } finally {
+      setImporting(false)
     }
   }
 
@@ -179,27 +248,25 @@ export default function AdminEleccionVotantes() {
                 className="w-40 bg-transparent text-sm outline-none placeholder:text-gray-400"
               />
             </div>
-            <button className="flex items-center justify-center rounded-lg px-3 py-2.5 text-white shadow-sm" style={{ backgroundColor: BRAND }}>
-              <Filter size={15} />
+
+            {/* Hidden file input */}
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+
+            <button
+              onClick={() => { setImportResult(null); setImportParseErrors([]); fileRef.current?.click() }}
+              className="flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition hover:opacity-80"
+              style={{ borderColor: ACCENT, color: ACCENT, backgroundColor: "transparent" }}
+            >
+              <Upload size={15} />
+              Importar CSV
             </button>
-            <button className="rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm" style={{ backgroundColor: BRAND }}>
-              Buscar
-            </button>
-            <div className="flex overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-              {(["grid", "list"] as const).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setView(v)}
-                  className="flex items-center px-3 py-2 transition"
-                  style={{ backgroundColor: view === v ? BRAND : "transparent", color: view === v ? "#fff" : "#9CA3AF" }}
-                >
-                  {v === "grid" ? <LayoutGrid size={16} /> : <List size={16} />}
-                </button>
-              ))}
-            </div>
-            <button className="flex items-center gap-1 rounded-lg px-3 py-2.5 text-white shadow-sm" style={{ backgroundColor: BRAND }}>
-              <Download size={15} />
-            </button>
+
             <button
               onClick={() => { setShowForm(true); setError(null) }}
               className="ml-auto flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
@@ -209,6 +276,101 @@ export default function AdminEleccionVotantes() {
               Agregar Votante
             </button>
           </div>
+
+          {/* CSV import preview panel */}
+          {(importRows !== null || importParseErrors.length > 0) && (
+            <div className="mb-6 rounded-2xl bg-white p-6 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="font-semibold" style={{ color: BRAND }}>
+                  Importar votantes desde CSV
+                </h3>
+                <button onClick={() => { setImportRows(null); setImportParseErrors([]) }}>
+                  <X size={18} className="text-gray-400 hover:text-gray-600" />
+                </button>
+              </div>
+
+              <p className="mb-3 text-xs text-gray-400">
+                Formato esperado (sin encabezado alternativo):{" "}
+                <code className="rounded bg-gray-100 px-1 py-0.5">numero_cuenta,nombre_completo,correo,codigo_carrera</code>
+              </p>
+
+              {importParseErrors.length > 0 && (
+                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3">
+                  <p className="mb-1 text-xs font-semibold text-red-600">Errores de validación:</p>
+                  <ul className="list-inside list-disc space-y-0.5 text-xs text-red-500">
+                    {importParseErrors.map((err, i) => <li key={i}>{err}</li>)}
+                  </ul>
+                </div>
+              )}
+
+              {importRows && importRows.length > 0 && (
+                <>
+                  <p className="mb-4 text-sm text-gray-600">
+                    <span className="font-semibold text-gray-800">{importRows.length}</span> votante{importRows.length !== 1 ? "s" : ""} listos para importar.
+                    Los que ya existan en esta elección serán omitidos sin error.
+                  </p>
+                  <div className="mb-4 max-h-48 overflow-y-auto rounded-lg border border-gray-100">
+                    <table className="w-full text-xs">
+                      <thead className="sticky top-0 bg-gray-50">
+                        <tr>
+                          {["N° Cuenta", "Nombre", "Correo", "Carrera"].map((h) => (
+                            <th key={h} className="px-3 py-2 text-left font-semibold text-gray-500">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {importRows.map((r, i) => (
+                          <tr key={i}>
+                            <td className="px-3 py-1.5 text-gray-700">{r.institutional_id}</td>
+                            <td className="px-3 py-1.5 text-gray-700">{r.full_name}</td>
+                            <td className="px-3 py-1.5 text-gray-500">{r.email}</td>
+                            <td className="px-3 py-1.5 text-gray-500">
+                              {careers.find((c) => c.career_id === r.career_id)?.code ?? r.career_id}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      onClick={handleImportConfirm}
+                      disabled={importing}
+                      className="flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+                      style={{ backgroundColor: BRAND }}
+                    >
+                      {importing ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
+                      {importing ? "Importando…" : "Confirmar importación"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Import result banner */}
+          {importResult && (
+            <div className="mb-5 flex items-start gap-3 rounded-2xl border border-green-200 bg-green-50 p-4">
+              <CheckCircle2 size={18} className="mt-0.5 flex-shrink-0 text-green-500" />
+              <div className="text-sm">
+                <p className="font-semibold text-green-700">
+                  Importación completada: {importResult.created} creado{importResult.created !== 1 ? "s" : ""},{" "}
+                  {importResult.skipped} omitido{importResult.skipped !== 1 ? "s" : ""}
+                  {importResult.errors.length > 0 && `, ${importResult.errors.length} con error`}.
+                </p>
+                {importResult.errors.length > 0 && (
+                  <ul className="mt-1 list-inside list-disc text-xs text-red-500">
+                    {importResult.errors.map((err, i) => (
+                      <li key={i}>{err.row.institutional_id}: {err.error}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <button onClick={() => setImportResult(null)} className="ml-auto text-green-400 hover:text-green-600">
+                <X size={16} />
+              </button>
+            </div>
+          )}
 
           {/* Add form panel */}
           {showForm && (
@@ -306,18 +468,28 @@ export default function AdminEleccionVotantes() {
               <p className="mb-6 max-w-sm text-sm text-gray-500">
                 Registra los estudiantes habilitados para participar en esta elección.
               </p>
-              <button
-                onClick={() => { setShowForm(true); setError(null) }}
-                className="flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
-                style={{ backgroundColor: BRAND }}
-              >
-                <Plus size={15} />
-                Agregar Votante
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { fileRef.current?.click() }}
+                  className="flex items-center gap-2 rounded-lg border px-5 py-2.5 text-sm font-semibold transition hover:opacity-80"
+                  style={{ borderColor: ACCENT, color: ACCENT }}
+                >
+                  <Upload size={15} />
+                  Importar CSV
+                </button>
+                <button
+                  onClick={() => { setShowForm(true); setError(null) }}
+                  className="flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+                  style={{ backgroundColor: BRAND }}
+                >
+                  <Plus size={15} />
+                  Agregar Votante
+                </button>
+              </div>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto rounded-2xl bg-white shadow-sm">
+              <table className="w-full min-w-[600px] text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 text-left">
                     <th className="px-5 py-3 text-xs font-semibold uppercase text-gray-400">Nombre</th>

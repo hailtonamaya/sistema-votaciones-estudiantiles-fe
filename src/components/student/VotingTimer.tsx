@@ -19,7 +19,7 @@ export function VotingTimer({ startTime }: Props) {
 
   return (
     <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-[#1B2770]">
-      <span className="text-xs text-gray-500">Tiempo transcurrido:</span>
+      <span className="hidden text-xs text-gray-500 sm:inline">Tiempo transcurrido:</span>
       <svg
         width="16"
         height="16"

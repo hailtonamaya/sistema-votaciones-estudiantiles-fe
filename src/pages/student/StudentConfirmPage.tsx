@@ -82,20 +82,20 @@ export default function StudentConfirmPage() {
         <VotingTimer startTime={voteStartTime} />
       </div>
 
-      <div className="mx-auto max-w-2xl px-6 pb-12">
+      <div className="mx-auto max-w-2xl px-4 pb-12 sm:px-6">
         <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
           {photoUrl ? (
             <img
               src={photoUrl}
               alt={assocName}
-              className="h-80 w-full object-cover"
+              className="h-52 w-full object-cover sm:h-80"
             />
           ) : isBlank ? (
-            <div className="flex h-80 w-full items-center justify-center bg-gray-50">
+            <div className="flex h-52 w-full items-center justify-center bg-gray-50 sm:h-80">
               <UnitecLogo size="lg" />
             </div>
           ) : (
-            <div className="flex h-80 w-full items-center justify-center bg-slate-200 text-slate-400">
+            <div className="flex h-52 w-full items-center justify-center bg-slate-200 text-slate-400 sm:h-80">
               <svg
                 width="64"
                 height="64"

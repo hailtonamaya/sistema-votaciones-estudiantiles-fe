@@ -71,10 +71,6 @@ export default function AdminGestionUsuarios() {
 
   const isFormValid = !!(form.nombre.trim() && form.correo.trim() && form.rol)
 
-  useEffect(() => {
-    loadData()
-  }, [])
-
   async function loadData() {
     try {
       setLoading(true)
@@ -87,6 +83,9 @@ export default function AdminGestionUsuarios() {
       setLoading(false)
     }
   }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
+  useEffect(() => { loadData() }, [])
 
   function openAdd() {
     setEditingId(null)
@@ -271,7 +270,7 @@ export default function AdminGestionUsuarios() {
       {/* Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.45)" }}>
-          <div className="relative w-full max-w-lg rounded-2xl bg-white p-8 shadow-xl">
+          <div className="relative mx-4 w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl sm:mx-0 sm:p-8">
             <button onClick={closeModal} className="absolute right-5 top-5 text-gray-400 transition hover:text-gray-600">
               <X size={20} />
             </button>

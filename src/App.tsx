@@ -25,6 +25,7 @@ import AdminEleccionRevision from "@/pages/admin/AdminEleccionRevision"
 import AdminGestionUsuarios from "@/pages/admin/AdminGestionUsuarios"
 import AdminBancoCampus from "@/pages/admin/AdminBancoCampus"
 import AdminBancoCarreras from "@/pages/admin/AdminBancoCarreras"
+import AdminPerfil from "@/pages/admin/AdminPerfil"
 
 export default function App() {
   return (
@@ -139,20 +140,22 @@ export default function App() {
               }
             />
 
-            {[
-              { slug: "perfil", title: "Mi Perfil" },
-              { slug: "parametros", title: "Parámetros Globales" },
-            ].map(({ slug, title }) => (
-              <Route
-                key={slug}
-                path={`/admin/configuracion/${slug}`}
-                element={
-                  <ProtectedRoute roles={["admin"]}>
-                    <AdminPlaceholder title={title} />
-                  </ProtectedRoute>
-                }
-              />
-            ))}
+            <Route
+              path="/admin/configuracion/perfil"
+              element={
+                <ProtectedRoute roles={["admin"]}>
+                  <AdminPerfil />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/configuracion/parametros"
+              element={
+                <ProtectedRoute roles={["admin"]}>
+                  <AdminPlaceholder title="Parámetros Globales" />
+                </ProtectedRoute>
+              }
+            />
 
             <Route
               path="/admin/ayuda"

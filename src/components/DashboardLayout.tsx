@@ -37,7 +37,7 @@ export function DashboardLayout({ children }: Props) {
   return (
     <div className="min-h-screen bg-[#EDF0F5]">
       <header className="bg-[#1B2770] shadow-lg">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-center gap-4">
             <img
               src="/unitec-logo.png"
@@ -89,13 +89,13 @@ export function DashboardLayout({ children }: Props) {
         </div>
       </header>
 
-      <div className="border-b border-[#1B2770]/10 bg-white px-6 py-2">
+      <div className="border-b border-[#1B2770]/10 bg-white px-4 py-2 sm:px-6">
         <p className="mx-auto max-w-7xl text-xs capitalize text-gray-400">
           {dateStr}
         </p>
       </div>
 
-      <main className="mx-auto max-w-7xl px-6 py-10">{children}</main>
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">{children}</main>
     </div>
   )
 }

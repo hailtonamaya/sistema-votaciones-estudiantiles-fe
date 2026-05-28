@@ -138,7 +138,7 @@ function StatCard({ label, value, color }: { label: string; value: number | stri
   return (
     <div className="rounded-2xl bg-white p-5 shadow-sm">
       <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{label}</p>
-      <p className="mt-1 text-3xl font-bold" style={{ color }}>{value}</p>
+      <p className="mt-1 text-2xl font-bold sm:text-3xl" style={{ color }}>{value}</p>
     </div>
   )
 }

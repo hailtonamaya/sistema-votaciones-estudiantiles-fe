@@ -166,15 +166,25 @@ export const deleteAssociationMember = (token: string, associationId: string, me
 export interface ApiVoter {
   election_voter_id: string
   election_id: string
-  student_id: string
+  voter_id: string
   career_id: string
   has_voted: boolean
   voted_at?: string | null
-  full_name?: string
-  institutional_id?: string
-  email?: string
-  student?: { institutional_id: string; user?: { email: string; full_name: string } | null } | null
+  voter?: { voter_id: string; institutional_id: string; full_name: string; email: string; is_active: boolean } | null
   career?: { career_id: string; name: string; code: string } | null
+}
+
+export interface ImportVoterRow {
+  institutional_id: string
+  full_name: string
+  email: string
+  career_id: string
+}
+
+export interface ImportVotersResult {
+  created: number
+  skipped: number
+  errors: Array<{ row: ImportVoterRow; error: string }>
 }
 
 export const listVoters = (token: string, electionId: string): Promise<ApiVoter[]> =>
@@ -186,6 +196,14 @@ export const createVoter = (
 ): Promise<ApiVoter> =>
   api<{ data: ApiVoter }>('/voters', { method: 'POST', token, body }).then((r) => r.data)
 
+export const importVoters = (
+  token: string,
+  electionId: string,
+  rows: ImportVoterRow[],
+): Promise<ImportVotersResult> =>
+  api<{ data: ImportVotersResult }>('/voters/import', { method: 'POST', token, body: { election_id: electionId, rows } })
+    .then((r) => r.data)
+
 export const deleteVoter = (token: string, id: string): Promise<void> =>
   api<void>(`/voters/${id}`, { method: 'DELETE', token })
 
@@ -193,6 +211,9 @@ export const deleteVoter = (token: string, id: string): Promise<void> =>
 
 export const listAdminUsers = (token: string): Promise<ApiUser[]> =>
   api<{ data: ApiUser[] }>("/users", { token }).then((r) => r.data)
+
+export const getAdminUser = (token: string, id: string): Promise<ApiUser> =>
+  api<{ data: ApiUser }>(`/users/${id}`, { token }).then((r) => r.data)
 
 export const createAdminUser = (
   token: string,

@@ -61,9 +61,8 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle: string })
 
 function BottomBar({ children }: { children: React.ReactNode }) {
   const [target, setTarget] = useState<Element | null>(null)
-  useEffect(() => {
-    setTarget(document.getElementById("admin-wizard-footer"))
-  }, [])
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setTarget(document.getElementById("admin-wizard-footer")) }, [])
   if (!target) return null
   return createPortal(
     <div
@@ -190,7 +189,7 @@ function Step1({ election, onSaved, onSaveAndExit, onCancel, token }: Step1Props
       <SectionHeader title="Detalles Generales" subtitle="Paso 1 de 5 - Configura los detalles de la elección." />
       {error && <ErrorBanner message={error} />}
 
-      <div className="max-w-3xl space-y-6 rounded-2xl bg-white p-8 shadow-sm">
+      <div className="w-full space-y-6 rounded-2xl bg-white p-8 shadow-sm">
         {/* Name */}
         <div>
           <label className="mb-1.5 block text-sm font-semibold" style={{ color: BRAND }}>
@@ -832,13 +831,13 @@ function Step4({ electionId, token, onNext, onBack, onExit }: Step4Props) {
   }
 
   function getVoterName(v: ApiVoter) {
-    return v.full_name ?? v.student?.user?.full_name ?? "—"
+    return v.voter?.full_name ?? "—"
   }
   function getVoterEmail(v: ApiVoter) {
-    return v.email ?? v.student?.user?.email ?? "—"
+    return v.voter?.email ?? "—"
   }
   function getVoterAccount(v: ApiVoter) {
-    return v.institutional_id ?? v.student?.institutional_id ?? "—"
+    return v.voter?.institutional_id ?? "—"
   }
   function getVoterCareer(v: ApiVoter) {
     return v.career?.name ?? "—"
@@ -1125,7 +1124,7 @@ function Step5({ electionId, token, onBack, onFinish }: Step5Props) {
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 size={24} className="animate-spin text-gray-400" /></div>
       ) : (
-        <div className="max-w-3xl rounded-2xl bg-white p-8 shadow-sm space-y-8">
+        <div className="w-full rounded-2xl bg-white p-8 shadow-sm space-y-8">
           {/* Summary */}
           <div>
             <h2 className="mb-4 text-lg font-bold" style={{ color: BRAND }}>Resumen de Elección</h2>
@@ -1211,8 +1210,8 @@ export default function AdminEleccionWizard() {
   const electionId = searchParams.get("id") ?? null
 
   const [election, setElection] = useState<ApiElection | null>(null)
+  const [loadingElection, setLoadingElection] = useState(!!electionId)
 
-  // Load election data when arriving in edit mode (id already in URL)
   useEffect(() => {
     if (electionId && !election) {
       listElections(token!)
@@ -1221,6 +1220,7 @@ export default function AdminEleccionWizard() {
           if (found) setElection(found)
         })
         .catch(() => {})
+        .finally(() => setLoadingElection(false))
     }
   }, [electionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1264,49 +1264,55 @@ export default function AdminEleccionWizard() {
         <span className="ml-3 text-sm font-medium text-gray-500">{titles[step]}</span>
       </div>
 
-      {step === 1 && (
-        <Step1
-          election={election}
-          token={token!}
-          onSaved={(e) => { setElection(e); goTo(2, e.election_id) }}
-          onSaveAndExit={(e) => { setElection(e); handleExit() }}
-          onCancel={handleExit}
-        />
-      )}
-      {step === 2 && electionId && (
-        <Step2
-          electionId={electionId}
-          token={token!}
-          onNext={() => goTo(3)}
-          onBack={() => goTo(1)}
-          onExit={handleExit}
-        />
-      )}
-      {step === 3 && electionId && (
-        <Step3
-          electionId={electionId}
-          token={token!}
-          onNext={() => goTo(4)}
-          onBack={() => goTo(2)}
-          onExit={handleExit}
-        />
-      )}
-      {step === 4 && electionId && (
-        <Step4
-          electionId={electionId}
-          token={token!}
-          onNext={() => goTo(5)}
-          onBack={() => goTo(3)}
-          onExit={handleExit}
-        />
-      )}
-      {step === 5 && electionId && (
-        <Step5
-          electionId={electionId}
-          token={token!}
-          onBack={() => goTo(4)}
-          onFinish={handleExit}
-        />
+      {loadingElection ? (
+        <div className="flex justify-center py-16"><Loader2 size={24} className="animate-spin text-gray-400" /></div>
+      ) : (
+        <>
+          {step === 1 && (
+            <Step1
+              election={election}
+              token={token!}
+              onSaved={(e) => { setElection(e); goTo(2, e.election_id) }}
+              onSaveAndExit={(e) => { setElection(e); handleExit() }}
+              onCancel={handleExit}
+            />
+          )}
+          {step === 2 && electionId && (
+            <Step2
+              electionId={electionId}
+              token={token!}
+              onNext={() => goTo(3)}
+              onBack={() => goTo(1)}
+              onExit={handleExit}
+            />
+          )}
+          {step === 3 && electionId && (
+            <Step3
+              electionId={electionId}
+              token={token!}
+              onNext={() => goTo(4)}
+              onBack={() => goTo(2)}
+              onExit={handleExit}
+            />
+          )}
+          {step === 4 && electionId && (
+            <Step4
+              electionId={electionId}
+              token={token!}
+              onNext={() => goTo(5)}
+              onBack={() => goTo(3)}
+              onExit={handleExit}
+            />
+          )}
+          {step === 5 && electionId && (
+            <Step5
+              electionId={electionId}
+              token={token!}
+              onBack={() => goTo(4)}
+              onFinish={handleExit}
+            />
+          )}
+        </>
       )}
     </AdminLayout>
   )

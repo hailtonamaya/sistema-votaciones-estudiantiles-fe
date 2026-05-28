@@ -39,7 +39,7 @@ export default function ObserverDashboard() {
 
   return (
     <DashboardLayout>
-      <div className="mb-8 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 p-8 text-white shadow-sm">
+      <div className="mb-8 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 p-5 text-white shadow-sm sm:p-8">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-white/60">

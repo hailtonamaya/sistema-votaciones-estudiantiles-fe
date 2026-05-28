@@ -56,9 +56,8 @@ export default function AdminEleccionesDetalles() {
   const [search, setSearch] = useState("")
   const [view, setView] = useState<"grid" | "list">("grid")
 
-  useEffect(() => {
-    loadElections()
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { loadElections() }, [])
 
   async function loadElections() {
     try {

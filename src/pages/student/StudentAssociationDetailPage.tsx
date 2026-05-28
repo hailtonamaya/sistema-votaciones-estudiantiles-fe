@@ -77,15 +77,15 @@ export default function StudentAssociationDetailPage() {
         <VotingTimer startTime={voteStartTime} />
       </div>
 
-      <div className="relative mx-6 overflow-hidden rounded-2xl bg-slate-200 shadow-sm">
+      <div className="relative mx-4 overflow-hidden rounded-2xl bg-slate-200 shadow-sm sm:mx-6">
         {selectedAssociation.photoUrl ? (
           <img
             src={selectedAssociation.photoUrl}
             alt={selectedAssociation.name}
-            className="h-72 w-full object-cover"
+            className="h-48 w-full object-cover sm:h-72"
           />
         ) : (
-          <div className="flex h-72 w-full items-center justify-center bg-slate-200 text-slate-400">
+          <div className="flex h-48 w-full items-center justify-center bg-slate-200 text-slate-400 sm:h-72">
             <svg
               width="80"
               height="80"
@@ -111,7 +111,7 @@ export default function StudentAssociationDetailPage() {
         </div>
       </div>
 
-      <div className="mx-6 mt-8 pb-32">
+      <div className="mx-4 mt-6 pb-32 sm:mx-6 sm:mt-8">
         <h2 className="mb-1 text-2xl font-bold text-[#1B2770]">Candidatos</h2>
         <div className="mb-6 h-0.5 w-20 bg-[#1B2770]" />
 

@@ -9,6 +9,13 @@ import {
   listCareers,
 } from "@/services/admin.service"
 import {
+  getPrediction,
+  getInsights,
+  type Prediction,
+  type Insights,
+} from "@/services/results.service"
+import {
+  AlertTriangle,
   BarChart2,
   ChevronDown,
   FileText,
@@ -19,11 +26,35 @@ import {
   Loader2,
   Play,
   Plus,
+  Sparkles,
   TrendingUp,
+  Trophy,
 } from "lucide-react"
 
 const BRAND = "#06065C"
 const ACCENT = "#03AED2"
+
+function pct(n: number): string {
+  const v = n <= 1 ? n * 100 : n
+  return `${v.toFixed(1)}%`
+}
+
+function renderSummary(text: string) {
+  return text.split("\n").map((line, i) => {
+    const parts = line.split(/(\*\*[^*]+\*\*)/g)
+    return (
+      <p key={i} className={line.trim() === "" ? "h-2" : "text-sm leading-relaxed text-gray-600"}>
+        {parts.map((p, j) =>
+          p.startsWith("**") && p.endsWith("**") ? (
+            <strong key={j} style={{ color: BRAND }}>{p.slice(2, -2)}</strong>
+          ) : (
+            <span key={j}>{p.replace(/^[-•]\s*/, "• ")}</span>
+          ),
+        )}
+      </p>
+    )
+  })
+}
 
 const STATUS_LABELS: Record<string, string> = {
   open: "Activa",
@@ -153,6 +184,11 @@ export default function AdminDashboard() {
   const [selectedCareer, setSelectedCareer] = useState("")
   const [carreraOpen, setCarreraOpen] = useState(false)
   const [accionesOpen, setActionsOpen] = useState(false)
+  const [prediction, setPrediction] = useState<Prediction | null>(null)
+  const [insights, setInsights] = useState<Insights | null>(null)
+  const [predLoading, setPredLoading] = useState(false)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -171,6 +207,27 @@ export default function AdminDashboard() {
   const scheduledElections = elections.filter((e) => e.status === "scheduled")
   const hasActiveElection = activeElections.length > 0
   const currentElection = activeElections[0] ?? scheduledElections[0] ?? null
+  const currentElectionId = currentElection?.election_id ?? null
+
+  useEffect(() => {
+    if (!currentElectionId || !token) {
+      setPrediction(null)
+      setInsights(null)
+      return
+    }
+    setPredLoading(true)
+    getPrediction(currentElectionId, token)
+      .then(setPrediction)
+      .catch(() => setPrediction(null))
+      .finally(() => setPredLoading(false))
+
+    setAiLoading(true)
+    setAiError(null)
+    getInsights(currentElectionId, token)
+      .then(setInsights)
+      .catch((e) => setAiError(e?.message ?? "No se pudo generar el resumen IA"))
+      .finally(() => setAiLoading(false))
+  }, [currentElectionId, token])
 
   const tabs = [
     { id: "dashboard", label: "Dashboard General", icon: <LayoutDashboard size={15} /> },
@@ -337,6 +394,101 @@ export default function AdminDashboard() {
           </div>
         ) : (
           <div className="space-y-5">
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+              {/* Proyección estadística */}
+              <div className="rounded-2xl bg-white p-5 shadow-sm">
+                <div className="mb-3 flex items-start justify-between">
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: BRAND }}>Proyección de Resultados</p>
+                    <p className="text-xs text-gray-400">Pronóstico estadístico en tiempo real</p>
+                  </div>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl"
+                    style={{ backgroundColor: "#EDF0F5", color: BRAND }}>
+                    <Trophy size={18} />
+                  </div>
+                </div>
+                {predLoading ? (
+                  <div className="flex h-32 items-center justify-center">
+                    <Loader2 size={22} className="animate-spin text-gray-300" />
+                  </div>
+                ) : !prediction || !prediction.has_enough_data ? (
+                  <p className="py-8 text-center text-sm text-gray-400">
+                    Datos insuficientes para una proyección confiable todavía.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium uppercase tracking-wide text-gray-400">Planilla líder</span>
+                      <span className="rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                        style={{ backgroundColor: "#EDF0F5", color: BRAND }}>
+                        {prediction.confidence_label}
+                      </span>
+                    </div>
+                    <div className="flex items-end justify-between">
+                      <p className="text-lg font-bold" style={{ color: BRAND }}>
+                        {prediction.projected_winner?.name ?? "—"}
+                      </p>
+                      <p className="text-2xl font-bold" style={{ color: ACCENT }}>
+                        {prediction.projected_winner ? pct(prediction.projected_winner.win_probability) : "—"}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 border-t border-gray-100 pt-3 text-center">
+                      <div>
+                        <p className="text-[10px] uppercase text-gray-400">Margen</p>
+                        <p className="text-sm font-semibold text-gray-700">{pct(prediction.margin)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase text-gray-400">2.º lugar</p>
+                        <p className="truncate text-sm font-semibold text-gray-700">{prediction.runner_up?.name ?? "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase text-gray-400">Pendientes</p>
+                        <p className="text-sm font-semibold text-gray-700">{prediction.remaining_voters}</p>
+                      </div>
+                    </div>
+                    {prediction.anomalies.length > 0 && (
+                      <div className="mt-2 space-y-1 rounded-xl bg-amber-50 p-3">
+                        {prediction.anomalies.slice(0, 3).map((a, i) => (
+                          <p key={i} className="flex items-start gap-1.5 text-xs text-amber-700">
+                            <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+                            <span><strong>{a.label}:</strong> {a.note}</span>
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Resumen ejecutivo IA */}
+              <div className="rounded-2xl bg-white p-5 shadow-sm">
+                <div className="mb-3 flex items-start justify-between">
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: BRAND }}>Resumen Ejecutivo (IA)</p>
+                    <p className="text-xs text-gray-400">Análisis generado por el asistente</p>
+                  </div>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl"
+                    style={{ backgroundColor: "#EDF0F5", color: BRAND }}>
+                    <Sparkles size={18} />
+                  </div>
+                </div>
+                {aiLoading ? (
+                  <div className="flex h-32 flex-col items-center justify-center gap-2 text-gray-400">
+                    <Loader2 size={22} className="animate-spin" />
+                    <span className="text-xs">Generando resumen…</span>
+                  </div>
+                ) : aiError ? (
+                  <p className="py-8 text-center text-sm text-gray-400">{aiError}</p>
+                ) : insights ? (
+                  <div className="max-h-72 space-y-1 overflow-y-auto pr-1">
+                    {renderSummary(insights.summary)}
+                  </div>
+                ) : (
+                  <p className="py-8 text-center text-sm text-gray-400">Sin datos para analizar.</p>
+                )}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
               <ChartCard
                 title="Participación por Hora"

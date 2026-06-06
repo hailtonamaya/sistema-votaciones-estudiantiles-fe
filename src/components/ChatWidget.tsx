@@ -114,7 +114,7 @@ export function ChatWidget() {
     setSending(true)
     try {
       const reply = await sendChatMessage(
-        next.filter((m) => m !== WELCOME),
+        next.filter((m) => m !== welcome),
         token!,
       )
       setMessages((m) => [...m, { role: "assistant", content: reply }])

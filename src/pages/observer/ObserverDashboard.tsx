@@ -1,6 +1,5 @@
 import { DashboardLayout } from "@/components/DashboardLayout"
 import { useAuth } from "@/context/AuthContext"
-import { BRAND } from "@/lib/brand"
 
 interface InfoCardProps {
   title: string
@@ -23,7 +22,7 @@ function InfoCard({ title, description, icon, badge, badgeColor }: InfoCardProps
           </span>
         )}
       </div>
-      <h3 className="font-semibold text-gray-900 transition group-hover:text-brand">
+      <h3 className="font-semibold text-gray-900 transition group-hover:text-emerald-700">
         {title}
       </h3>
       <p className="mt-1 text-sm text-gray-500">{description}</p>

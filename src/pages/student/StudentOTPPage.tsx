@@ -33,7 +33,7 @@ export default function StudentOTPPage() {
 
     let token = ""
     try {
-      const { token: t, user } = await verifyOTP(email, code)
+      const { token: t, user } = await verifyOTP(email as string, code)
 
       if (user.role !== "student") {
         setError("Este portal es exclusivo para estudiantes.")
@@ -97,7 +97,7 @@ export default function StudentOTPPage() {
             type="submit"
             disabled={loading || !complete}
             className="mt-6 w-full rounded-lg py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-            style={{ backgroundColor: BRAND }}
+            style={{ backgroundColor: BRAND || "#10b981" }}
           >
             {loading ? "Verificando..." : "Iniciar Sesión"}
           </button>

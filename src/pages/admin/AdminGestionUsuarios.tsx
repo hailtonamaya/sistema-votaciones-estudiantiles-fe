@@ -8,7 +8,7 @@ import {
   updateAdminUser,
   deleteAdminUser,
 } from "@/services/admin.service"
-import { Pencil, Plus, Trash2, X } from "lucide-react"
+import { Pencil, Plus, Search, Trash2, X } from "lucide-react"
 
 type UserStatus = "Activo" | "Inactivo"
 
@@ -16,14 +16,12 @@ const ROL_OPTIONS = [
   { value: "admin", label: "Administrador" },
   { value: "observer", label: "Observador" },
   { value: "auditor", label: "Auditor" },
-  { value: "staff", label: "Staff" },
 ]
 
 const ROL_ALL_LABELS: Record<string, string> = {
   admin: "Administrador",
   observer: "Observador",
   auditor: "Auditor",
-  staff: "Staff",
   student: "Estudiante",
 }
 
@@ -69,7 +67,19 @@ export default function AdminGestionUsuarios() {
   const [saving, setSaving] = useState(false)
   const [modalError, setModalError] = useState<string | null>(null)
 
+  const [search, setSearch] = useState("")
+  const [filterRol, setFilterRol] = useState("")
+  const [filterEstado, setFilterEstado] = useState("")
+
   const isFormValid = !!(form.nombre.trim() && form.correo.trim() && form.rol)
+
+  const filtered = users.filter((u) => {
+    const q = search.toLowerCase()
+    const matchSearch = !q || u.nombre.toLowerCase().includes(q) || u.correo.toLowerCase().includes(q)
+    const matchRol = !filterRol || u.rol === filterRol
+    const matchEstado = !filterEstado || u.estado === filterEstado
+    return matchSearch && matchRol && matchEstado
+  })
 
   async function loadData() {
     try {
@@ -150,10 +160,14 @@ export default function AdminGestionUsuarios() {
   }
 
   function toggleAll() {
-    setSelected(selected.length === users.length ? [] : users.map((u) => u.id))
+    const ids = filtered.map((u) => u.id)
+    const allChecked = ids.every((id) => selected.includes(id))
+    setSelected((prev) =>
+      allChecked ? prev.filter((id) => !ids.includes(id)) : [...new Set([...prev, ...ids])]
+    )
   }
 
-  const allSelected = users.length > 0 && selected.length === users.length
+  const allSelected = filtered.length > 0 && filtered.every((u) => selected.includes(u.id))
 
   return (
     <AdminLayout>
@@ -162,15 +176,68 @@ export default function AdminGestionUsuarios() {
       </h1>
 
       <div className="rounded-2xl bg-white p-6 shadow-sm">
-        <div className="mb-4 flex justify-end">
-          <button
-            onClick={openAdd}
-            className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
-            style={{ backgroundColor: "#06065C" }}
+        {/* Toolbar */}
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+            <Search size={14} className="flex-shrink-0 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar por nombre o correo…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-52 bg-transparent text-sm outline-none placeholder:text-gray-400"
+            />
+            {search && (
+              <button onClick={() => setSearch("")} className="text-gray-300 hover:text-gray-500">
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
+          <select
+            value={filterRol}
+            onChange={(e) => setFilterRol(e.target.value)}
+            className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600 outline-none"
           >
-            <Plus size={16} />
-            Agregar Administrador
-          </button>
+            <option value="">Todos los roles</option>
+            {ROL_OPTIONS.map((r) => (
+              <option key={r.value} value={r.value}>{r.label}</option>
+            ))}
+          </select>
+
+          <select
+            value={filterEstado}
+            onChange={(e) => setFilterEstado(e.target.value)}
+            className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600 outline-none"
+          >
+            <option value="">Todos los estados</option>
+            <option value="Activo">Activo</option>
+            <option value="Inactivo">Inactivo</option>
+          </select>
+
+          {(search || filterRol || filterEstado) && (
+            <button
+              onClick={() => { setSearch(""); setFilterRol(""); setFilterEstado("") }}
+              className="text-xs text-gray-400 underline hover:text-gray-600"
+            >
+              Limpiar filtros
+            </button>
+          )}
+
+          <span className="text-xs text-gray-400">
+            {filtered.length} de {users.length} usuario{users.length !== 1 ? "s" : ""}
+          </span>
+
+          <div className="ml-auto">
+            <button
+              onClick={openAdd}
+              className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+              style={{ backgroundColor: "#06065C" }}
+            >
+              <Plus size={16} />
+              Agregar Usuario
+            </button>
+          </div>
         </div>
 
         {loading && (
@@ -203,7 +270,7 @@ export default function AdminGestionUsuarios() {
                 </tr>
               </thead>
               <tbody>
-                {users.map((user) => {
+                {filtered.map((user) => {
                   const isSelected = selected.includes(user.id)
                   return (
                     <tr key={user.id} className="border-t border-gray-100 transition hover:bg-gray-50">
@@ -254,10 +321,10 @@ export default function AdminGestionUsuarios() {
                     </tr>
                   )
                 })}
-                {users.length === 0 && (
+                {filtered.length === 0 && (
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-sm text-gray-400">
-                      No hay usuarios registrados.
+                      {users.length === 0 ? "No hay usuarios registrados." : "No hay resultados para los filtros aplicados."}
                     </td>
                   </tr>
                 )}

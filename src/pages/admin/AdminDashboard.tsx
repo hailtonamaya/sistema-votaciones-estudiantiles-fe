@@ -98,11 +98,11 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (!token) return
-    setFetchError(null)
     Promise.all([listElections(token), listCareers(token)])
       .then(([elecs, carrs]) => {
         setElections(elecs)
         setCareers(carrs)
+        setFetchError(null)
       })
       .catch((e) =>
         setFetchError(e instanceof Error ? e.message : "Error al cargar los datos del dashboard"),
@@ -117,11 +117,8 @@ export default function AdminDashboard() {
   const currentElectionId = currentElection?.election_id ?? null
 
   useEffect(() => {
-    if (!currentElectionId || !token) {
-      setPrediction(null)
-      setInsights(null)
-      return
-    }
+    if (!currentElectionId || !token) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPredLoading(true)
     getPrediction(currentElectionId, token)
       .then(setPrediction)
@@ -129,9 +126,8 @@ export default function AdminDashboard() {
       .finally(() => setPredLoading(false))
 
     setAiLoading(true)
-    setAiError(null)
     getInsights(currentElectionId, token)
-      .then(setInsights)
+      .then((ins) => { setInsights(ins); setAiError(null) })
       .catch((e) => setAiError(e?.message ?? "No se pudo generar el resumen IA"))
       .finally(() => setAiLoading(false))
   }, [currentElectionId, token])

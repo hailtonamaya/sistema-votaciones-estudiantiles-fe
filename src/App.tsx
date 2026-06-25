@@ -17,6 +17,7 @@ const AdminPlaceholder        = lazy(() => import("@/pages/admin/AdminPlaceholde
 const AdminResultados         = lazy(() => import("@/pages/admin/AdminResultados"))
 const AdminEleccionesDetalles = lazy(() => import("@/pages/admin/AdminEleccionesDetalles"))
 const AdminEleccionWizard     = lazy(() => import("@/pages/admin/AdminEleccionWizard"))
+const AdminEleccionEditar     = lazy(() => import("@/pages/admin/AdminEleccionEditar"))
 const AdminEleccionAsociaciones = lazy(() => import("@/pages/admin/AdminEleccionAsociaciones"))
 const AdminEleccionCandidatos = lazy(() => import("@/pages/admin/AdminEleccionCandidatos"))
 const AdminEleccionVotantes   = lazy(() => import("@/pages/admin/AdminEleccionVotantes"))
@@ -25,6 +26,8 @@ const AdminGestionUsuarios    = lazy(() => import("@/pages/admin/AdminGestionUsu
 const AdminBancoCampus        = lazy(() => import("@/pages/admin/AdminBancoCampus"))
 const AdminBancoCarreras      = lazy(() => import("@/pages/admin/AdminBancoCarreras"))
 const AdminPerfil             = lazy(() => import("@/pages/admin/AdminPerfil"))
+const AdminArchivados         = lazy(() => import("@/pages/admin/AdminArchivados"))
+const AdminAyuda              = lazy(() => import("@/pages/admin/AdminAyuda"))
 
 const ObserverDashboard           = lazy(() => import("@/pages/observer/ObserverDashboard"))
 
@@ -67,7 +70,7 @@ export default function App() {
                 path="/admin/archivados"
                 element={
                   <ProtectedRoute roles={["admin"]}>
-                    <AdminPlaceholder title="Archivados" />
+                    <AdminArchivados />
                   </ProtectedRoute>
                 }
               />
@@ -86,6 +89,15 @@ export default function App() {
                 element={
                   <ProtectedRoute roles={["admin"]}>
                     <AdminEleccionWizard />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/admin/elecciones/editar"
+                element={
+                  <ProtectedRoute roles={["admin"]}>
+                    <AdminEleccionEditar />
                   </ProtectedRoute>
                 }
               />
@@ -177,7 +189,7 @@ export default function App() {
                 path="/admin/ayuda"
                 element={
                   <ProtectedRoute roles={["admin"]}>
-                    <AdminPlaceholder title="Ayuda" />
+                    <AdminAyuda />
                   </ProtectedRoute>
                 }
               />

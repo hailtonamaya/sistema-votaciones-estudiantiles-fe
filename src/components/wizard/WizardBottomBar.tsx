@@ -1,11 +1,11 @@
-import { useEffect, useState, type ReactNode } from "react"
+import { useLayoutEffect, useState, type ReactNode } from "react"
 import { createPortal } from "react-dom"
 
 export function WizardBottomBar({ children }: { children: ReactNode }) {
   const [target, setTarget] = useState<Element | null>(null)
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
+  useLayoutEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTarget(document.getElementById("admin-wizard-footer"))
   }, [])
 

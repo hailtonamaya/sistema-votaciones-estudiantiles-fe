@@ -172,6 +172,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   }, [])
 
   // Close mobile drawer on route change
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setMobileOpen(false) }, [location.pathname])
 
   function toggle(key: string) {

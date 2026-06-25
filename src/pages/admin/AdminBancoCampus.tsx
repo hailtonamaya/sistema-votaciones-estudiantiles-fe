@@ -8,7 +8,7 @@ import {
   updateOrganization,
   deleteOrganization,
 } from "@/services/admin.service"
-import { Pencil, Plus, Trash2, X } from "lucide-react"
+import { Pencil, Plus, Search, Trash2, X } from "lucide-react"
 
 type CampusStatus = "Activo" | "Inactivo"
 
@@ -51,7 +51,20 @@ export default function AdminBancoCampus() {
   const [saving, setSaving] = useState(false)
   const [modalError, setModalError] = useState<string | null>(null)
 
+  const [search, setSearch] = useState("")
+  const [filterEstado, setFilterEstado] = useState("")
+
   const isFormValid = !!(form.nombre.trim() && form.codigo.trim() && form.ubicacion.trim())
+
+  const filtered = campuses.filter((c) => {
+    const q = search.toLowerCase()
+    const matchSearch = !q ||
+      c.nombre.toLowerCase().includes(q) ||
+      c.codigo.toLowerCase().includes(q) ||
+      c.ubicacion.toLowerCase().includes(q)
+    const matchEstado = !filterEstado || c.estado === filterEstado
+    return matchSearch && matchEstado
+  })
 
   async function loadData() {
     try {
@@ -128,10 +141,14 @@ export default function AdminBancoCampus() {
   }
 
   function toggleAll() {
-    setSelected(selected.length === campuses.length ? [] : campuses.map((c) => c.id))
+    const ids = filtered.map((c) => c.id)
+    const allChecked = ids.every((id) => selected.includes(id))
+    setSelected((prev) =>
+      allChecked ? prev.filter((id) => !ids.includes(id)) : [...new Set([...prev, ...ids])]
+    )
   }
 
-  const allSelected = campuses.length > 0 && selected.length === campuses.length
+  const allSelected = filtered.length > 0 && filtered.every((c) => selected.includes(c.id))
 
   return (
     <AdminLayout>
@@ -140,15 +157,57 @@ export default function AdminBancoCampus() {
       </h1>
 
       <div className="rounded-2xl bg-white p-6 shadow-sm">
-        <div className="mb-4 flex justify-end">
-          <button
-            onClick={openAdd}
-            className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
-            style={{ backgroundColor: "#06065C" }}
+        {/* Toolbar */}
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+            <Search size={14} className="flex-shrink-0 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar por nombre, código o ubicación…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-56 bg-transparent text-sm outline-none placeholder:text-gray-400"
+            />
+            {search && (
+              <button onClick={() => setSearch("")} className="text-gray-300 hover:text-gray-500">
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
+          <select
+            value={filterEstado}
+            onChange={(e) => setFilterEstado(e.target.value)}
+            className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600 outline-none"
           >
-            <Plus size={16} />
-            Agregar Campus
-          </button>
+            <option value="">Todos los estados</option>
+            <option value="Activo">Activo</option>
+            <option value="Inactivo">Inactivo</option>
+          </select>
+
+          {(search || filterEstado) && (
+            <button
+              onClick={() => { setSearch(""); setFilterEstado("") }}
+              className="text-xs text-gray-400 underline hover:text-gray-600"
+            >
+              Limpiar filtros
+            </button>
+          )}
+
+          <span className="text-xs text-gray-400">
+            {filtered.length} de {campuses.length} campus
+          </span>
+
+          <div className="ml-auto">
+            <button
+              onClick={openAdd}
+              className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+              style={{ backgroundColor: "#06065C" }}
+            >
+              <Plus size={16} />
+              Agregar Campus
+            </button>
+          </div>
         </div>
 
         {loading && (
@@ -181,7 +240,7 @@ export default function AdminBancoCampus() {
                 </tr>
               </thead>
               <tbody>
-                {campuses.map((campus) => {
+                {filtered.map((campus) => {
                   const isSelected = selected.includes(campus.id)
                   return (
                     <tr key={campus.id} className="border-t border-gray-100 transition hover:bg-gray-50">
@@ -221,10 +280,10 @@ export default function AdminBancoCampus() {
                     </tr>
                   )
                 })}
-                {campuses.length === 0 && (
+                {filtered.length === 0 && (
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-sm text-gray-400">
-                      No hay campus registrados.
+                      {campuses.length === 0 ? "No hay campus registrados." : "No hay resultados para los filtros aplicados."}
                     </td>
                   </tr>
                 )}

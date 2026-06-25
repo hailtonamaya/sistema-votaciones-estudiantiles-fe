@@ -10,7 +10,7 @@ import {
   deleteCareer,
   listOrganizations,
 } from "@/services/admin.service"
-import { Pencil, Plus, Trash2, X } from "lucide-react"
+import { Pencil, Plus, Search, Trash2, X } from "lucide-react"
 
 interface Carrera {
   id: string
@@ -55,7 +55,17 @@ export default function AdminBancoCarreras() {
   const [saving, setSaving] = useState(false)
   const [modalError, setModalError] = useState<string | null>(null)
 
+  const [search, setSearch] = useState("")
+  const [filterCampus, setFilterCampus] = useState("")
+
   const isFormValid = !!(form.nombre.trim() && form.codigo.trim() && form.organizationId && Number(form.minVotos) > 0)
+
+  const filtered = carreras.filter((c) => {
+    const q = search.toLowerCase()
+    const matchSearch = !q || c.nombre.toLowerCase().includes(q) || c.codigo.toLowerCase().includes(q)
+    const matchCampus = !filterCampus || c.organizationId === filterCampus
+    return matchSearch && matchCampus
+  })
 
   async function loadData() {
     try {
@@ -140,10 +150,14 @@ export default function AdminBancoCarreras() {
   }
 
   function toggleAll() {
-    setSelected(selected.length === carreras.length ? [] : carreras.map((c) => c.id))
+    const ids = filtered.map((c) => c.id)
+    const allChecked = ids.every((id) => selected.includes(id))
+    setSelected((prev) =>
+      allChecked ? prev.filter((id) => !ids.includes(id)) : [...new Set([...prev, ...ids])]
+    )
   }
 
-  const allSelected = carreras.length > 0 && selected.length === carreras.length
+  const allSelected = filtered.length > 0 && filtered.every((c) => selected.includes(c.id))
 
   return (
     <AdminLayout>
@@ -152,15 +166,58 @@ export default function AdminBancoCarreras() {
       </h1>
 
       <div className="rounded-2xl bg-white p-6 shadow-sm">
-        <div className="mb-4 flex justify-end">
-          <button
-            onClick={openAdd}
-            className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
-            style={{ backgroundColor: "#06065C" }}
+        {/* Toolbar */}
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+            <Search size={14} className="flex-shrink-0 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar por nombre o código…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-52 bg-transparent text-sm outline-none placeholder:text-gray-400"
+            />
+            {search && (
+              <button onClick={() => setSearch("")} className="text-gray-300 hover:text-gray-500">
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
+          <select
+            value={filterCampus}
+            onChange={(e) => setFilterCampus(e.target.value)}
+            className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600 outline-none"
           >
-            <Plus size={16} />
-            Agregar Carrera
-          </button>
+            <option value="">Todos los campus</option>
+            {organizations.map((o) => (
+              <option key={o.organization_id} value={o.organization_id}>{o.name}</option>
+            ))}
+          </select>
+
+          {(search || filterCampus) && (
+            <button
+              onClick={() => { setSearch(""); setFilterCampus("") }}
+              className="text-xs text-gray-400 underline hover:text-gray-600"
+            >
+              Limpiar filtros
+            </button>
+          )}
+
+          <span className="text-xs text-gray-400">
+            {filtered.length} de {carreras.length} carrera{carreras.length !== 1 ? "s" : ""}
+          </span>
+
+          <div className="ml-auto">
+            <button
+              onClick={openAdd}
+              className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+              style={{ backgroundColor: "#06065C" }}
+            >
+              <Plus size={16} />
+              Agregar Carrera
+            </button>
+          </div>
         </div>
 
         {loading && (
@@ -193,7 +250,7 @@ export default function AdminBancoCarreras() {
                 </tr>
               </thead>
               <tbody>
-                {carreras.map((carrera) => {
+                {filtered.map((carrera) => {
                   const isSelected = selected.includes(carrera.id)
                   return (
                     <tr key={carrera.id} className="border-t border-gray-100 transition hover:bg-gray-50">
@@ -223,10 +280,10 @@ export default function AdminBancoCarreras() {
                     </tr>
                   )
                 })}
-                {carreras.length === 0 && (
+                {filtered.length === 0 && (
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-sm text-gray-400">
-                      No hay carreras registradas.
+                      {carreras.length === 0 ? "No hay carreras registradas." : "No hay resultados para los filtros aplicados."}
                     </td>
                   </tr>
                 )}

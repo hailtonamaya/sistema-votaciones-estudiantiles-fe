@@ -5,6 +5,7 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from "react"
+import { useLocation } from "react-router-dom"
 import { Bot, Loader, MessageSquare, Send, Sparkle, X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -84,9 +85,14 @@ function MessageBubble({ message }: { message: ChatEntry }) {
 
 export function ChatWidget() {
   const { token, user } = useAuth()
+  const { pathname } = useLocation()
   const isAdmin = user?.role === "admin"
   const welcome = isAdmin ? WELCOME_ADMIN : WELCOME_STUDENT
   const suggestions = isAdmin ? SUGGESTIONS_ADMIN : SUGGESTIONS_STUDENT
+
+  // Pages with a fixed bottom bar (wizard): move the widget up so it doesn't cover the bar
+  const hasFixedBottomBar = pathname.includes("/wizard")
+  const bottomPos = hasFixedBottomBar ? "bottom-24" : "bottom-6"
 
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<ChatEntry[]>([welcome])
@@ -156,7 +162,10 @@ export function ChatWidget() {
           type="button"
           aria-label="Abrir asistente de votación"
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full px-4 py-3 text-white shadow-lg ring-1 ring-black/5 transition hover:opacity-90 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+          className={cn(
+            "fixed right-6 z-50 flex items-center gap-2 rounded-full px-4 py-3 text-white shadow-lg ring-1 ring-black/5 transition hover:opacity-90 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40",
+            bottomPos,
+          )}
           style={{ backgroundColor: BRAND }}
         >
           <MessageSquare className="h-5 w-5" />
@@ -169,7 +178,10 @@ export function ChatWidget() {
           role="dialog"
           aria-modal="true"
           aria-label="Asistente de votación"
-          className="fixed bottom-6 right-6 z-50 flex max-h-[calc(100dvh-3rem)] h-[34rem] w-[22rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl bg-[#F6F8FC] shadow-2xl ring-1 ring-black/10"
+          className={cn(
+            "fixed right-6 z-50 flex max-h-[calc(100dvh-3rem)] h-[34rem] w-[22rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl bg-[#F6F8FC] shadow-2xl ring-1 ring-black/10",
+            bottomPos,
+          )}
         >
           <header className="flex items-center justify-between px-4 py-3 text-white" style={{ backgroundColor: BRAND }}>
             <div className="flex items-center gap-2">

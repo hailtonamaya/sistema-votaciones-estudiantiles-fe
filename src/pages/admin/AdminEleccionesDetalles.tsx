@@ -1,22 +1,25 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
+
 import { AdminLayout } from "@/components/AdminLayout"
 import { useAuth } from "@/context/AuthContext"
 import {
   type ApiElection,
+  type ApiOrganization,
   type ElectionStatus,
   listElections,
+  listOrganizations,
   deleteElection,
   transitionElection,
 } from "@/services/admin.service"
 import {
   Archive,
+  BarChart2,
   Building2,
   Calendar,
   CheckCircle2,
   Clock,
-  Copy,
-  Filter,
+  Eye,
   LayoutGrid,
   List,
   Pencil,
@@ -27,11 +30,13 @@ import {
 
 const STATUS_CONFIG: Record<ElectionStatus, { label: string; bg: string; color: string }> = {
   open:      { label: "Activa",      bg: "#DCFCE7", color: "#16A34A" },
+  paused:    { label: "Pausada",     bg: "#FEE2E2", color: "#DC2626" },
   closed:    { label: "Finalizada",  bg: "#E2E8F0", color: "#475569" },
   draft:     { label: "Borrador",    bg: "#FEF9C3", color: "#A16207" },
   scheduled: { label: "Programada",  bg: "#DBEAFE", color: "#1D4ED8" },
   cancelled: { label: "Archivada",   bg: "#F1F5F9", color: "#94A3B8" },
 }
+
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—"
@@ -51,13 +56,16 @@ export default function AdminEleccionesDetalles() {
   const { token } = useAuth()
   const navigate = useNavigate()
   const [elections, setElections] = useState<ApiElection[]>([])
+  const [organizations, setOrganizations] = useState<ApiOrganization[]>([])
+  const [selectedOrg, setSelectedOrg] = useState("")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
   const [view, setView] = useState<"grid" | "list">("grid")
-
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadElections() }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { listOrganizations(token!).then(setOrganizations).catch(() => {}) }, [])
 
   async function loadElections() {
     try {
@@ -83,17 +91,20 @@ export default function AdminEleccionesDetalles() {
 
   async function handleArchive(election: ApiElection) {
     if (election.status === "cancelled") return
+    if (!confirm(`¿Archivar "${election.title}"? Pasará a la sección Archivados.`)) return
     try {
-      const updated = await transitionElection(token!, election.election_id, "cancelled")
-      setElections((prev) => prev.map((e) => (e.election_id === updated.election_id ? { ...e, status: updated.status } : e)))
+      await transitionElection(token!, election.election_id, "cancelled")
+      setElections((prev) => prev.filter((e) => e.election_id !== election.election_id))
     } catch (e) {
       alert(e instanceof Error ? e.message : "Error al archivar")
     }
   }
 
-  const filtered = elections.filter((e) =>
-    e.title.toLowerCase().includes(search.toLowerCase()),
-  )
+  const filtered = elections.filter((e) => {
+    const matchSearch = e.title.toLowerCase().includes(search.toLowerCase())
+    const matchOrg = !selectedOrg || e.organization_id === selectedOrg
+    return matchSearch && matchOrg
+  })
 
   return (
     <AdminLayout>
@@ -119,21 +130,16 @@ export default function AdminEleccionesDetalles() {
           />
         </div>
 
-        <button
-          className="flex items-center justify-center rounded-lg px-3 py-2.5 text-white shadow-sm transition hover:opacity-90"
-          style={{ backgroundColor: "#06065C" }}
-          title="Filtros"
+        <select
+          value={selectedOrg}
+          onChange={(e) => setSelectedOrg(e.target.value)}
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-600 shadow-sm outline-none focus:border-blue-400"
         >
-          <Filter size={15} />
-        </button>
-
-        <button
-          onClick={loadElections}
-          className="rounded-lg px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
-          style={{ backgroundColor: "#06065C" }}
-        >
-          Buscar
-        </button>
+          <option value="">Todos los campus</option>
+          {organizations.map((o) => (
+            <option key={o.organization_id} value={o.organization_id}>{o.name}</option>
+          ))}
+        </select>
 
         <div className="flex overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
           <button
@@ -218,30 +224,50 @@ export default function AdminEleccionesDetalles() {
 
                 {/* Actions row */}
                 <div className="flex items-center gap-3 border-t border-gray-100 px-5 py-3">
-                  <button
-                    title="Editar"
-                    onClick={() => navigate(`/admin/elecciones/wizard?id=${election.election_id}&step=1`)}
-                    className="transition hover:opacity-60"
-                  >
-                    <Pencil size={17} style={{ color: "#03AED2" }} />
-                  </button>
-                  <button title="Duplicar" className="transition hover:opacity-60">
-                    <Copy size={17} style={{ color: "#03AED2" }} />
-                  </button>
-                  <button
-                    title="Archivar"
-                    onClick={() => handleArchive(election)}
-                    className="transition hover:opacity-60"
-                  >
-                    <Archive size={17} style={{ color: "#03AED2" }} />
-                  </button>
-                  <button
-                    title="Eliminar"
-                    onClick={() => handleDelete(election.election_id)}
-                    className="transition hover:opacity-60"
-                  >
-                    <Trash2 size={17} style={{ color: "#EF4444" }} />
-                  </button>
+                  {(election.status === "closed" || election.status === "cancelled") ? (
+                    <button
+                      title="Ver (solo lectura)"
+                      onClick={() => navigate(`/admin/elecciones/editar?id=${election.election_id}`)}
+                      className="transition hover:opacity-60"
+                    >
+                      <Eye size={17} style={{ color: "#94A3B8" }} />
+                    </button>
+                  ) : (
+                    <button
+                      title="Editar"
+                      onClick={() => navigate(`/admin/elecciones/editar?id=${election.election_id}`)}
+                      className="transition hover:opacity-60"
+                    >
+                      <Pencil size={17} style={{ color: "#03AED2" }} />
+                    </button>
+                  )}
+                  {(election.status === "open" || election.status === "paused" || election.status === "closed") && (
+                    <button
+                      title="Ver resultados"
+                      onClick={() => navigate(`/admin/elecciones/resultados?id=${election.election_id}`)}
+                      className="transition hover:opacity-60"
+                    >
+                      <BarChart2 size={17} style={{ color: "#03AED2" }} />
+                    </button>
+                  )}
+                  {election.status !== "closed" && (
+                    <button
+                      title="Archivar"
+                      onClick={() => handleArchive(election)}
+                      className="transition hover:opacity-60"
+                    >
+                      <Archive size={17} style={{ color: "#03AED2" }} />
+                    </button>
+                  )}
+                  {election.status === "draft" && (
+                    <button
+                      title="Eliminar"
+                      onClick={() => handleDelete(election.election_id)}
+                      className="transition hover:opacity-60"
+                    >
+                      <Trash2 size={17} style={{ color: "#EF4444" }} />
+                    </button>
+                  )}
 
                   <div
                     className="ml-auto flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
@@ -251,6 +277,7 @@ export default function AdminEleccionesDetalles() {
                     {status.label}
                   </div>
                 </div>
+
 
                 {/* Bottom accent */}
                 <div className="h-1.5" style={{ backgroundColor: "#47C8F0" }} />

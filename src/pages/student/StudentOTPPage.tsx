@@ -26,7 +26,7 @@ export default function StudentOTPPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!complete || loading) return
+    if (!complete || loading || !email) return
 
     setLoading(true)
     setError("")

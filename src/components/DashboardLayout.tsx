@@ -4,7 +4,6 @@ import { BRAND } from "@/lib/brand"
 
 const ROLE_LABEL: Record<UserRole, string> = {
   admin: "Administrador",
-  staff: "Personal",
   observer: "Observador",
   auditor: "Auditor",
   student: "Estudiante",
@@ -12,7 +11,6 @@ const ROLE_LABEL: Record<UserRole, string> = {
 
 const ROLE_COLOR: Record<UserRole, string> = {
   admin: "bg-blue-100 text-blue-800",
-  staff: "bg-sky-100 text-sky-800",
   observer: "bg-emerald-100 text-emerald-800",
   auditor: "bg-amber-100 text-amber-800",
   student: "bg-purple-100 text-purple-800",

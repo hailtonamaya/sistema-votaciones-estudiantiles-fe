@@ -2,7 +2,7 @@ import { api } from "@/lib/api"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type ElectionStatus = "draft" | "scheduled" | "open" | "closed" | "cancelled"
+export type ElectionStatus = "draft" | "scheduled" | "open" | "paused" | "closed" | "cancelled"
 
 export interface ApiElection {
   election_id: string
@@ -49,6 +49,9 @@ export interface ApiUser {
 export const listElections = (token: string, status?: string): Promise<ApiElection[]> =>
   api<{ data: ApiElection[] }>(`/elections${status ? `?status=${status}` : ""}`, { token })
     .then((r) => r.data)
+
+export const getElection = (token: string, id: string): Promise<ApiElection> =>
+  api<{ data: ApiElection }>(`/elections/${id}`, { token }).then((r) => r.data)
 
 export const createElection = (
   token: string,
@@ -170,7 +173,8 @@ export interface ApiVoter {
   career_id: string
   has_voted: boolean
   voted_at?: string | null
-  voter?: { voter_id: string; institutional_id: string; full_name: string; email: string; is_active: boolean } | null
+  is_primary?: boolean
+  voter?: { voter_id: string; institutional_id: string; full_name: string; email: string; is_active: boolean; is_on_campus: boolean } | null
   career?: { career_id: string; name: string; code: string } | null
 }
 
@@ -179,6 +183,8 @@ export interface ImportVoterRow {
   full_name: string
   email: string
   career_id: string
+  is_primary?: boolean
+  is_on_campus?: boolean
 }
 
 export interface ImportVotersResult {
@@ -193,7 +199,7 @@ export const listVoters = (token: string, electionId: string): Promise<ApiVoter[
 
 export const createVoter = (
   token: string,
-  body: { election_id: string; career_id: string; full_name: string; institutional_id: string; email: string },
+  body: { election_id: string; career_id: string; full_name: string; institutional_id: string; email: string; is_primary?: boolean; is_on_campus?: boolean },
 ): Promise<ApiVoter> =>
   api<{ data: ApiVoter }>("/voters", { method: "POST", token, body }).then((r) => r.data)
 

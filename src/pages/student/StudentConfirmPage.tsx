@@ -44,6 +44,7 @@ export default function StudentConfirmPage() {
       const result = await castVote(
         {
           electionId: election!.id,
+          careerId: election!.careerId,
           associationId: isBlank ? null : (selectedAssociation as Association).id,
         },
         token!,
@@ -55,8 +56,12 @@ export default function StudentConfirmPage() {
 
       setVoteResult(result)
       navigate("/student/exito")
-    } catch {
-      setError("No se pudo registrar el voto. Inténtalo de nuevo.")
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo registrar el voto. Inténtalo de nuevo.",
+      )
     } finally {
       setLoading(false)
     }

@@ -47,6 +47,16 @@ interface CastBallotResponse {
   }
 }
 
+export async function checkVoterStatus(
+  email: string,
+): Promise<{ proceed: boolean; reason?: 'no_election' | 'already_voted' }> {
+  const res = await api<{ data: { proceed: boolean; reason?: 'no_election' | 'already_voted' } }>(
+    '/auth/voter-check',
+    { method: 'POST', body: { email } },
+  )
+  return res.data
+}
+
 export async function requestOTP(email: string): Promise<void> {
   await api<{ data: { message: string } }>("/auth/request-otp", {
     method: "POST",
@@ -88,6 +98,7 @@ export async function getStudentElection(token: string): Promise<Election> {
     title: e.title,
     careerId: e.career_id,
     careerName: e.career_name,
+    hasVoted: e.has_voted,
     associations: e.associations.map((a) => ({
       id: a.association_id,
       name: a.name,
@@ -118,6 +129,7 @@ export async function castVote(
     token,
     body: {
       election_id: payload.electionId,
+      career_id: payload.careerId,
       association_id: isBlank ? undefined : payload.associationId,
       is_blank: isBlank,
     },

@@ -17,12 +17,21 @@ import {
 interface Step3Props {
   electionId: string
   token: string
+  isReadOnly?: boolean
+  hideHeader?: boolean
   onNext: () => void
   onBack: () => void
   onExit: () => void
 }
 
-export function Step3({ electionId, token, onNext, onBack, onExit }: Step3Props) {
+interface CareerGroup {
+  career_id: string
+  career_name: string
+  career_code: string
+  associations: ApiAssociation[]
+}
+
+export function Step3({ electionId, token, isReadOnly = false, hideHeader = false, onNext, onBack, onExit }: Step3Props) {
   const [associations, setAssociations] = useState<ApiAssociation[]>([])
   const [loading, setLoading] = useState(true)
   const [activeAssoc, setActiveAssoc] = useState<string | null>(null)
@@ -37,6 +46,25 @@ export function Step3({ electionId, token, onNext, onBack, onExit }: Step3Props)
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [token, electionId])
+
+  // Group associations by career
+  const careerGroups: CareerGroup[] = (() => {
+    const map = new Map<string, CareerGroup>()
+    for (const assoc of associations) {
+      const career = assoc.election_career?.career
+      const cid = career?.career_id ?? "sin-carrera"
+      if (!map.has(cid)) {
+        map.set(cid, {
+          career_id: cid,
+          career_name: career?.name ?? "Sin carrera",
+          career_code: career?.code ?? "",
+          associations: [],
+        })
+      }
+      map.get(cid)!.associations.push(assoc)
+    }
+    return [...map.values()]
+  })()
 
   async function handleAddMember(assocId: string) {
     setError(null)
@@ -85,12 +113,17 @@ export function Step3({ electionId, token, onNext, onBack, onExit }: Step3Props)
     }
   }
 
+  const inputCls =
+    "rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+
   return (
     <>
-      <SectionHeader
-        title="Candidatos"
-        subtitle="Paso 3 de 5 - Agrega los candidatos de cada asociación."
-      />
+      {!hideHeader && (
+        <SectionHeader
+          title="Candidatos por Asociación"
+          subtitle="Paso 3 de 5 - Agrega los candidatos de cada asociación."
+        />
+      )}
       {error && <ErrorBanner message={error} />}
       {removeError && <ErrorBanner message={removeError} />}
 
@@ -101,157 +134,189 @@ export function Step3({ electionId, token, onNext, onBack, onExit }: Step3Props)
       ) : associations.length === 0 ? (
         <EmptyState
           icon={<Users size={30} style={{ color: ACCENT }} />}
-          title="No hay asociaciones creadas"
+          title="No hay planillas creadas"
           description="Regresa al paso 2 para crear asociaciones antes de agregar candidatos."
         />
       ) : (
-        <div className="space-y-4">
-          {associations.map((assoc) => (
-            <div
-              key={assoc.association_id}
-              className="overflow-hidden rounded-2xl bg-white shadow-sm"
-            >
-              <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-4">
-                {assoc.logo_url ? (
-                  <img
-                    src={assoc.logo_url}
-                    alt={assoc.name}
-                    className="h-10 w-10 rounded-lg border border-gray-100 object-cover"
-                  />
-                ) : (
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-300">
-                    <Users size={18} />
-                  </div>
+        <div className="space-y-6">
+          {careerGroups.map((group) => (
+            <div key={group.career_id} className="space-y-3">
+              {/* Career divider header */}
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-bold" style={{ color: BRAND }}>
+                  {group.career_name}
+                </span>
+                {group.career_code && (
+                  <span className="rounded bg-blue-100 px-1.5 py-0.5 text-xs font-semibold text-blue-600">
+                    {group.career_code}
+                  </span>
                 )}
-                <div className="flex-1">
-                  <p className="text-sm font-semibold" style={{ color: BRAND }}>
-                    {assoc.name}
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    {assoc.association_member?.length ?? 0} candidato(s)
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    setActiveAssoc(
-                      activeAssoc === assoc.association_id ? null : assoc.association_id,
-                    )
-                    setError(null)
-                    setMemberForm({ full_name: "", role: "", photo_url: "" })
-                  }}
-                  className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
-                  style={{ backgroundColor: BRAND }}
-                >
-                  <UserPlus size={13} />
-                  Agregar candidato
-                </button>
+                <div className="h-px flex-1 bg-gray-100" />
               </div>
 
-              {activeAssoc === assoc.association_id && (
-                <div className="border-b border-gray-100 bg-gray-50 px-5 py-4">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    <label className="flex flex-col gap-1">
-                      <span className="sr-only">Nombre completo</span>
-                      <input
-                        type="text"
-                        placeholder="Nombre completo *"
-                        value={memberForm.full_name}
-                        onChange={(e) =>
-                          setMemberForm((p) => ({ ...p, full_name: e.target.value }))
-                        }
-                        className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
-                      />
-                    </label>
-                    <label className="flex flex-col gap-1">
-                      <span className="sr-only">Cargo / Rol</span>
-                      <input
-                        type="text"
-                        placeholder="Cargo / Rol"
-                        value={memberForm.role}
-                        onChange={(e) =>
-                          setMemberForm((p) => ({ ...p, role: e.target.value }))
-                        }
-                        className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
-                      />
-                    </label>
-                    <label className="flex flex-col gap-1">
-                      <span className="sr-only">URL de foto</span>
-                      <input
-                        type="url"
-                        placeholder="URL de foto (opcional)"
-                        value={memberForm.photo_url}
-                        onChange={(e) =>
-                          setMemberForm((p) => ({ ...p, photo_url: e.target.value }))
-                        }
-                        className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
-                      />
-                    </label>
-                  </div>
-                  <div className="mt-3 flex justify-end gap-2">
-                    <BtnSecondary onClick={() => setActiveAssoc(null)}>
-                      <X size={14} />
-                      Cancelar
-                    </BtnSecondary>
-                    <BtnPrimary
-                      loading={saving}
-                      onClick={() => handleAddMember(assoc.association_id)}
-                    >
-                      <Save size={14} />
-                      Guardar
-                    </BtnPrimary>
-                  </div>
-                </div>
-              )}
-
-              {(assoc.association_member ?? []).length > 0 ? (
-                <div className="divide-y divide-gray-50 px-5">
-                  {(assoc.association_member ?? []).map((m) => (
-                    <div key={m.association_member_id} className="flex items-center gap-3 py-3">
-                      {m.photo_url ? (
+              {/* Association cards */}
+              {group.associations.map((assoc) => {
+                const isActive = activeAssoc === assoc.association_id
+                return (
+                  <div
+                    key={assoc.association_id}
+                    className="overflow-hidden rounded-2xl bg-white shadow-sm"
+                  >
+                    {/* Association header */}
+                    <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-4">
+                      {assoc.logo_url ? (
                         <img
-                          src={m.photo_url}
-                          alt={m.full_name}
-                          className="h-8 w-8 rounded-full border border-gray-100 object-cover"
+                          src={assoc.logo_url}
+                          alt={assoc.name}
+                          className="h-10 w-10 rounded-lg border border-gray-100 object-cover"
                         />
                       ) : (
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-400">
-                          {m.full_name.charAt(0).toUpperCase()}
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-300">
+                          <Users size={18} />
                         </div>
                       )}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-gray-800">{m.full_name}</p>
-                        {m.role && <p className="text-xs text-gray-400">{m.role}</p>}
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold" style={{ color: BRAND }}>
+                          {assoc.name}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {assoc.association_member?.length ?? 0} candidato(s)
+                        </p>
                       </div>
-                      <button
-                        onClick={() => handleRemoveMember(assoc.association_id, m)}
-                        aria-label={`Eliminar candidato ${m.full_name}`}
-                        className="text-red-400 transition hover:text-red-600"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                      {!isReadOnly && (
+                        <button
+                          onClick={() => {
+                            setActiveAssoc(isActive ? null : assoc.association_id)
+                            setError(null)
+                            setMemberForm({ full_name: "", role: "", photo_url: "" })
+                          }}
+                          className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
+                          style={{ backgroundColor: isActive ? "#64748B" : BRAND }}
+                        >
+                          {isActive ? <X size={13} /> : <UserPlus size={13} />}
+                          {isActive ? "Cancelar" : "Agregar candidato"}
+                        </button>
+                      )}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="px-5 py-3 text-xs text-gray-400">Sin candidatos registrados.</p>
-              )}
+
+                    {/* Add candidate form */}
+                    {!isReadOnly && isActive && (
+                      <div className="border-b border-gray-100 bg-gray-50 px-5 py-4">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                          <input
+                            type="text"
+                            placeholder="Nombre completo *"
+                            value={memberForm.full_name}
+                            onChange={(e) =>
+                              setMemberForm((p) => ({ ...p, full_name: e.target.value }))
+                            }
+                            className={`${inputCls} w-full`}
+                          />
+                          <input
+                            type="text"
+                            placeholder="Cargo / Rol"
+                            value={memberForm.role}
+                            onChange={(e) =>
+                              setMemberForm((p) => ({ ...p, role: e.target.value }))
+                            }
+                            className={`${inputCls} w-full`}
+                          />
+                          <input
+                            type="url"
+                            placeholder="URL de foto (opcional)"
+                            value={memberForm.photo_url}
+                            onChange={(e) =>
+                              setMemberForm((p) => ({ ...p, photo_url: e.target.value }))
+                            }
+                            className={`${inputCls} w-full`}
+                          />
+                        </div>
+                        <div className="mt-3 flex justify-end gap-2">
+                          <BtnSecondary onClick={() => setActiveAssoc(null)}>
+                            <X size={14} />
+                            Cancelar
+                          </BtnSecondary>
+                          <BtnPrimary
+                            loading={saving}
+                            onClick={() => handleAddMember(assoc.association_id)}
+                          >
+                            <Save size={14} />
+                            Guardar
+                          </BtnPrimary>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Candidates list */}
+                    {(assoc.association_member ?? []).length === 0 ? (
+                      <p className="px-5 py-4 text-xs text-gray-400">
+                        Sin candidatos registrados.
+                      </p>
+                    ) : (
+                      <div className="divide-y divide-gray-50 px-5">
+                        {(assoc.association_member ?? []).map((m) => (
+                          <div
+                            key={m.association_member_id}
+                            className="flex items-center gap-3 py-3"
+                          >
+                            {m.photo_url ? (
+                              <img
+                                src={m.photo_url}
+                                alt={m.full_name}
+                                className="h-8 w-8 rounded-full border border-gray-100 object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-400">
+                                {m.full_name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium text-gray-800">
+                                {m.full_name}
+                              </p>
+                              {m.role && (
+                                <p className="text-xs text-gray-400">{m.role}</p>
+                              )}
+                            </div>
+                            {!isReadOnly && (
+                              <button
+                                onClick={() => handleRemoveMember(assoc.association_id, m)}
+                                aria-label={`Eliminar candidato ${m.full_name}`}
+                                className="text-red-400 transition hover:text-red-600"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           ))}
         </div>
       )}
 
       <WizardBottomBar>
-        <BtnSecondary onClick={onBack}>← Anterior</BtnSecondary>
-        <div className="ml-auto flex flex-wrap items-center gap-3">
-          <BtnAccent onClick={onExit}>
-            <Save size={15} />
-            Guardar y Salir
-          </BtnAccent>
-          <BtnPrimary onClick={onNext}>
-            Continuar a Votantes
-            <ChevronRight size={16} />
-          </BtnPrimary>
-        </div>
+        {isReadOnly ? (
+          <BtnSecondary onClick={onExit}>Cerrar</BtnSecondary>
+        ) : (
+          <>
+            <BtnSecondary onClick={onBack}>← Anterior</BtnSecondary>
+            <div className="ml-auto flex flex-wrap items-center gap-3">
+              <BtnAccent onClick={onExit}>
+                <Save size={15} />
+                Guardar y Salir
+              </BtnAccent>
+              <BtnPrimary onClick={onNext}>
+                Continuar a Votantes
+                <ChevronRight size={16} />
+              </BtnPrimary>
+            </div>
+          </>
+        )}
       </WizardBottomBar>
     </>
   )

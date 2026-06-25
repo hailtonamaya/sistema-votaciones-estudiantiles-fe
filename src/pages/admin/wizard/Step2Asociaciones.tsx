@@ -1,13 +1,10 @@
 import { useEffect, useRef, useState } from "react"
-import { ImageIcon, Plus, Trash2, Users, X } from "lucide-react"
-import { Loader2 } from "lucide-react"
-import { ChevronRight, Save } from "lucide-react"
+import { ChevronRight, ImageIcon, Loader2, Plus, Save, Trash2, Users, X } from "lucide-react"
 import { ErrorBanner } from "@/components/ErrorBanner"
 import { EmptyState } from "@/components/EmptyState"
 import { SectionHeader } from "@/components/wizard/SectionHeader"
 import { BtnPrimary, BtnSecondary, BtnAccent } from "@/components/wizard/WizardButtons"
 import { WizardBottomBar } from "@/components/wizard/WizardBottomBar"
-import { WizardToolbar } from "@/components/wizard/WizardToolbar"
 import { BRAND, ACCENT } from "@/lib/brand"
 import {
   type ApiAssociation,
@@ -21,61 +18,80 @@ import {
 interface Step2Props {
   electionId: string
   token: string
+  organizationId?: string
+  isReadOnly?: boolean
+  hideHeader?: boolean
   onNext: () => void
   onBack: () => void
   onExit: () => void
 }
 
-export function Step2({ electionId, token, onNext, onBack, onExit }: Step2Props) {
+export function Step2({ electionId, token, organizationId, isReadOnly = false, hideHeader = false, onNext, onBack, onExit }: Step2Props) {
   const [careers, setCareers] = useState<ApiCareer[]>([])
   const [associations, setAssociations] = useState<ApiAssociation[]>([])
   const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [view, setView] = useState<"grid" | "list">("list")
-  const [search, setSearch] = useState("")
+  const [activeCareerId, setActiveCareerId] = useState<string | null>(null)
+  const [form, setForm] = useState({ name: "", description: "", logo_url: "" })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
-
-  const [form, setForm] = useState({
-    career_id: "",
-    name: "",
-    description: "",
-    logo_url: "",
-  })
 
   useEffect(() => {
     Promise.all([
       listCareers(token),
       listAssociations(token, { election_id: electionId }),
     ])
-      .then(([c, a]) => {
-        setCareers(c)
-        setAssociations(a)
-      })
+      .then(([c, a]) => { setCareers(c); setAssociations(a) })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [token, electionId])
 
-  async function handleCreate() {
+  const relevantCareers = (
+    organizationId ? careers.filter((c) => c.organization_id === organizationId) : careers
+  ).sort((a, b) => a.name.localeCompare(b.name))
+
+  const assocByCareer = associations.reduce<Record<string, ApiAssociation[]>>((acc, a) => {
+    const cid = a.election_career?.career?.career_id
+    if (cid) { if (!acc[cid]) acc[cid] = []; acc[cid].push(a) }
+    return acc
+  }, {})
+
+  function openForm(careerId: string) {
+    setActiveCareerId(careerId)
+    setForm({ name: "", description: "", logo_url: "" })
     setError(null)
-    if (!form.career_id) { setError("Selecciona una carrera"); return }
-    if (!form.name.trim()) { setError("El nombre es requerido"); return }
+  }
+
+  async function handleCreate(careerId: string) {
+    setError(null)
+    if (!form.name.trim()) { setError("El nombre de la asociación es requerido"); return }
     setSaving(true)
     try {
       const created = await createAssociation(token, {
         election_id: electionId,
-        career_id: form.career_id,
+        career_id: careerId,
         name: form.name.trim(),
         description: form.description.trim() || undefined,
         logo_url: form.logo_url || undefined,
       })
-      setAssociations((prev) => [...prev, created])
-      setForm({ career_id: "", name: "", description: "", logo_url: "" })
-      setShowForm(false)
+      // Enrich with career info so grouping works immediately without a refetch
+      const career = careers.find((c) => c.career_id === careerId)
+      const enriched: ApiAssociation = {
+        ...created,
+        election_career: {
+          election_id: electionId,
+          career_id: careerId,
+          career: career
+            ? { career_id: career.career_id, name: career.name, code: career.code }
+            : null,
+        },
+      }
+      setAssociations((prev) => [...prev, enriched])
+      setActiveCareerId(null)
+      setForm({ name: "", description: "", logo_url: "" })
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error al crear asociación")
+      setError(e instanceof Error ? e.message : "Error al crear la asociación")
     } finally {
       setSaving(false)
     }
@@ -87,146 +103,20 @@ export function Step2({ electionId, token, onNext, onBack, onExit }: Step2Props)
       await deleteAssociation(token, id)
       setAssociations((prev) => prev.filter((a) => a.association_id !== id))
     } catch (e) {
-      setDeleteError(e instanceof Error ? e.message : "Error al eliminar la asociación")
+      setDeleteError(e instanceof Error ? e.message : "Error al eliminar la planilla")
     }
   }
 
-  const filtered = associations.filter((a) =>
-    a.name.toLowerCase().includes(search.toLowerCase()),
-  )
-
   const inputCls =
-    "w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-blue-400"
+    "w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-blue-400"
 
   return (
     <>
-      <SectionHeader
-        title="Crear Asociaciones"
-        subtitle="Paso 2 de 5 - Registra las asociaciones que participarán en la elección."
-      />
-
-      <WizardToolbar
-        search={search}
-        onSearchChange={setSearch}
-        view={view}
-        onViewChange={setView}
-        addLabel="Agregar Asociación"
-        onAdd={() => { setShowForm(true); setError(null) }}
-      />
-
-      {showForm && (
-        <div className="mb-6 rounded-2xl bg-white p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-semibold" style={{ color: BRAND }}>Agregar Asociación</h3>
-            <button onClick={() => setShowForm(false)}>
-              <X size={18} className="text-gray-400 hover:text-gray-600" />
-            </button>
-          </div>
-          {error && <ErrorBanner message={error} />}
-
-          <div className="mb-4">
-            <p className="mb-1.5 text-sm font-semibold" style={{ color: BRAND }}>
-              Portada de la Asociación
-            </p>
-            <div
-              onClick={() => fileRef.current?.click()}
-              className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-200 bg-blue-50 p-8 transition hover:border-blue-400"
-            >
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
-                <ImageIcon size={22} className="text-blue-400" />
-              </div>
-              <p className="text-sm text-gray-500">Arrastra una imagen o haz click para subir</p>
-              <p className="text-xs text-gray-400">PNG, JPG hasta 1MB</p>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (!file) return
-                  if (file.size > 1 * 1024 * 1024) {
-                    setError("La imagen no puede superar 1MB")
-                    return
-                  }
-                  const reader = new FileReader()
-                  reader.onload = (ev) =>
-                    setForm((p) => ({ ...p, logo_url: ev.target?.result as string }))
-                  reader.readAsDataURL(file)
-                }}
-              />
-            </div>
-            {form.logo_url && (
-              <div className="mt-2 flex items-center gap-2">
-                <img
-                  src={form.logo_url}
-                  alt="preview"
-                  className="h-16 w-16 rounded-lg border border-gray-200 object-cover"
-                />
-                <button
-                  onClick={() => setForm((p) => ({ ...p, logo_url: "" }))}
-                  className="text-xs text-red-500 hover:underline"
-                >
-                  Quitar imagen
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-sm font-semibold" style={{ color: BRAND }}>
-                Carrera <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={form.career_id}
-                onChange={(e) => setForm((p) => ({ ...p, career_id: e.target.value }))}
-                className={inputCls}
-              >
-                <option value="">Selecciona una carrera</option>
-                {careers.map((c) => (
-                  <option key={c.career_id} value={c.career_id}>
-                    {c.name} ({c.code})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-sm font-semibold" style={{ color: BRAND }}>
-                Nombre de la Asociación <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                placeholder="Ej. Asociación de Ingeniería"
-                className={inputCls}
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-sm font-semibold" style={{ color: BRAND }}>
-                Descripción
-              </label>
-              <textarea
-                value={form.description}
-                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-                rows={2}
-                placeholder="Descripción de la asociación…"
-                className={`${inputCls} resize-none`}
-              />
-            </div>
-          </div>
-
-          <div className="mt-4 flex justify-end gap-3">
-            <BtnSecondary onClick={() => setShowForm(false)}>Cancelar</BtnSecondary>
-            <BtnPrimary loading={saving} onClick={handleCreate}>
-              <Save size={15} />
-              Guardar Cambios
-            </BtnPrimary>
-          </div>
-        </div>
+      {!hideHeader && (
+        <SectionHeader
+          title="Asociaciones por Carrera"
+          subtitle="Paso 2 de 5 - Registra las asociaciones que participarán en cada carrera."
+        />
       )}
 
       {deleteError && <ErrorBanner message={deleteError} />}
@@ -235,55 +125,202 @@ export function Step2({ electionId, token, onNext, onBack, onExit }: Step2Props)
         <div className="flex justify-center py-16">
           <Loader2 size={24} className="animate-spin text-gray-400" />
         </div>
-      ) : filtered.length === 0 && !showForm ? (
+      ) : relevantCareers.length === 0 ? (
         <EmptyState
           icon={<Users size={30} style={{ color: ACCENT }} />}
-          title="Aún no hay asociaciones creadas"
-          description="Agrega las asociaciones que participarán en esta elección para configurar su papeleta."
-          action={{
-            label: "Agregar Asociación",
-            onClick: () => { setShowForm(true); setError(null) },
-            icon: <Plus size={15} />,
-          }}
+          title="No hay carreras disponibles"
+          description="Configura las carreras en la sección de gestión antes de crear asociaciones."
         />
       ) : (
-        <div
-          className={`grid gap-4 ${view === "grid" ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}
-        >
-          {filtered.map((assoc) => {
-            const careerName = assoc.election_career?.career?.name
+        <div className="space-y-4">
+          {relevantCareers.map((career) => {
+            const assocs = assocByCareer[career.career_id] ?? []
+            const isActive = activeCareerId === career.career_id
+
             return (
               <div
-                key={assoc.association_id}
-                className="flex items-center gap-4 rounded-xl bg-white p-4 shadow-sm"
+                key={career.career_id}
+                className="overflow-hidden rounded-2xl bg-white shadow-sm"
               >
-                {assoc.logo_url ? (
-                  <img
-                    src={assoc.logo_url}
-                    alt={assoc.name}
-                    className="h-14 w-14 flex-shrink-0 rounded-lg border border-gray-100 object-cover"
-                  />
-                ) : (
-                  <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-300">
-                    <Users size={24} />
+                {/* Career header */}
+                <div className="flex items-center gap-3 border-b border-gray-100 bg-gray-50 px-5 py-3">
+                  <div className="flex flex-1 items-center gap-2">
+                    <span className="text-sm font-semibold" style={{ color: BRAND }}>
+                      {career.name}
+                    </span>
+                    <span className="rounded bg-blue-100 px-1.5 py-0.5 text-xs font-semibold text-blue-600">
+                      {career.code}
+                    </span>
+                  </div>
+                  <span className="text-xs text-gray-400">{assocs.length} asociación(es)</span>
+                  {!isReadOnly && (
+                    <button
+                      onClick={() =>
+                        isActive ? setActiveCareerId(null) : openForm(career.career_id)
+                      }
+                      className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
+                      style={{ backgroundColor: isActive ? "#64748B" : BRAND }}
+                    >
+                      {isActive ? <X size={13} /> : <Plus size={13} />}
+                      {isActive ? "Cancelar" : "Agregar Asociación"}
+                    </button>
+                  )}
+                </div>
+
+                {/* Inline add form */}
+                {isActive && (
+                  <div className="border-b border-blue-100 bg-blue-50/40 px-5 py-4">
+                    {error && <ErrorBanner message={error} />}
+
+                    {/* Logo upload */}
+                    <div className="mb-4">
+                      {form.logo_url ? (
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={form.logo_url}
+                            alt="preview"
+                            className="h-16 w-16 rounded-xl border border-gray-200 object-cover"
+                          />
+                          <button
+                            onClick={() => setForm((p) => ({ ...p, logo_url: "" }))}
+                            className="text-xs text-red-500 hover:underline"
+                          >
+                            Quitar imagen
+                          </button>
+                        </div>
+                      ) : (
+                        <div
+                          onClick={() => fileRef.current?.click()}
+                          className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-blue-200 bg-white px-4 py-3 transition hover:border-blue-400"
+                        >
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100">
+                            <ImageIcon size={16} className="text-blue-400" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">
+                              Subir logo (opcional)
+                            </p>
+                            <p className="text-xs text-gray-400">PNG, JPG hasta 1MB</p>
+                          </div>
+                        </div>
+                      )}
+                      <input
+                        ref={fileRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          if (file.size > 1 * 1024 * 1024) {
+                            setError("La imagen no puede superar 1MB")
+                            return
+                          }
+                          const reader = new FileReader()
+                          reader.onload = (ev) =>
+                            setForm((p) => ({ ...p, logo_url: ev.target?.result as string }))
+                          reader.readAsDataURL(file)
+                        }}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div className="sm:col-span-2">
+                        <label
+                          className="mb-1 block text-xs font-semibold"
+                          style={{ color: BRAND }}
+                        >
+                          Nombre de la Asociación <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={form.name}
+                          onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                          placeholder="Ej. Planilla Progreso"
+                          className={inputCls}
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label
+                          className="mb-1 block text-xs font-semibold"
+                          style={{ color: BRAND }}
+                        >
+                          Descripción
+                        </label>
+                        <textarea
+                          value={form.description}
+                          onChange={(e) =>
+                            setForm((p) => ({ ...p, description: e.target.value }))
+                          }
+                          rows={2}
+                          placeholder="Descripción opcional…"
+                          className={`${inputCls} resize-none`}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex justify-end gap-2">
+                      <BtnSecondary onClick={() => setActiveCareerId(null)}>
+                        Cancelar
+                      </BtnSecondary>
+                      <BtnPrimary
+                        loading={saving}
+                        onClick={() => handleCreate(career.career_id)}
+                      >
+                        <Save size={14} />
+                        Guardar Asociación
+                      </BtnPrimary>
+                    </div>
                   </div>
                 )}
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold" style={{ color: BRAND }}>
-                    {assoc.name}
+
+                {/* Associations list */}
+                {assocs.length === 0 && !isActive ? (
+                  <p className="px-5 py-5 text-center text-sm text-gray-400">
+                    Sin asociaciones — agrega la primera para esta carrera.
                   </p>
-                  {careerName && <p className="mt-0.5 text-xs text-gray-400">{careerName}</p>}
-                  <p className="mt-0.5 text-xs text-gray-500">
-                    {assoc.association_member?.length ?? 0} candidato(s)
-                  </p>
-                </div>
-                <button
-                  onClick={() => handleDelete(assoc.association_id)}
-                  aria-label={`Eliminar planilla ${assoc.name}`}
-                  className="text-red-400 transition hover:text-red-600"
-                >
-                  <Trash2 size={16} />
-                </button>
+                ) : (
+                  <div className="divide-y divide-gray-50">
+                    {assocs.map((assoc) => (
+                      <div
+                        key={assoc.association_id}
+                        className="flex items-center gap-3 px-5 py-3"
+                      >
+                        {assoc.logo_url ? (
+                          <img
+                            src={assoc.logo_url}
+                            alt={assoc.name}
+                            className="h-10 w-10 flex-shrink-0 rounded-lg border border-gray-100 object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-300">
+                            <Users size={18} />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p
+                            className="truncate text-sm font-semibold"
+                            style={{ color: BRAND }}
+                          >
+                            {assoc.name}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {assoc.association_member?.length ?? 0} candidato(s)
+                          </p>
+                        </div>
+                        {!isReadOnly && (
+                          <button
+                            onClick={() => handleDelete(assoc.association_id)}
+                            aria-label={`Eliminar planilla ${assoc.name}`}
+                            className="text-red-400 transition hover:text-red-600"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )
           })}
@@ -291,17 +328,23 @@ export function Step2({ electionId, token, onNext, onBack, onExit }: Step2Props)
       )}
 
       <WizardBottomBar>
-        <BtnSecondary onClick={onBack}>← Anterior</BtnSecondary>
-        <div className="ml-auto flex flex-wrap items-center gap-3">
-          <BtnAccent onClick={onExit}>
-            <Save size={15} />
-            Guardar y Salir
-          </BtnAccent>
-          <BtnPrimary onClick={onNext}>
-            Continuar a Candidatos
-            <ChevronRight size={16} />
-          </BtnPrimary>
-        </div>
+        {isReadOnly ? (
+          <BtnSecondary onClick={onExit}>Cerrar</BtnSecondary>
+        ) : (
+          <>
+            <BtnSecondary onClick={onBack}>← Anterior</BtnSecondary>
+            <div className="ml-auto flex flex-wrap items-center gap-3">
+              <BtnAccent onClick={onExit}>
+                <Save size={15} />
+                Guardar y Salir
+              </BtnAccent>
+              <BtnPrimary onClick={onNext}>
+                Continuar a Candidatos
+                <ChevronRight size={16} />
+              </BtnPrimary>
+            </div>
+          </>
+        )}
       </WizardBottomBar>
     </>
   )

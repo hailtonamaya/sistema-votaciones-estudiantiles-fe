@@ -26,12 +26,13 @@ function toISO(local: string): string | undefined {
 interface Step1Props {
   election: ApiElection | null
   token: string
+  isReadOnly?: boolean
   onSaved: (e: ApiElection) => void
   onSaveAndExit: (e: ApiElection) => void
   onCancel: () => void
 }
 
-export function Step1({ election, token, onSaved, onSaveAndExit, onCancel }: Step1Props) {
+export function Step1({ election, token, isReadOnly = false, onSaved, onSaveAndExit, onCancel }: Step1Props) {
   const [orgs, setOrgs] = useState<ApiOrganization[]>([])
   const [form, setForm] = useState({
     title: election?.title ?? "",
@@ -51,6 +52,9 @@ export function Step1({ election, token, onSaved, onSaveAndExit, onCancel }: Ste
     setError(null)
     if (!form.title.trim()) { setError("El nombre de la elección es requerido"); return null }
     if (!form.organization_id) { setError("Selecciona un campus"); return null }
+    if (form.start_at && form.end_at && new Date(form.end_at) <= new Date(form.start_at)) {
+      setError("La fecha de fin debe ser posterior a la fecha de inicio"); return null
+    }
     setSaving(true)
     try {
       const payload = {
@@ -73,7 +77,11 @@ export function Step1({ election, token, onSaved, onSaveAndExit, onCancel }: Ste
   }
 
   const inputCls =
-    "w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+    `w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none ${
+      isReadOnly
+        ? "bg-gray-50 text-gray-500 cursor-not-allowed"
+        : "focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+    }`
 
   return (
     <>
@@ -94,6 +102,7 @@ export function Step1({ election, token, onSaved, onSaveAndExit, onCancel }: Ste
             onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
             placeholder="Ej. Elecciones Estudiantiles 2026"
             className={inputCls}
+            disabled={isReadOnly}
           />
         </div>
 
@@ -105,6 +114,7 @@ export function Step1({ election, token, onSaved, onSaveAndExit, onCancel }: Ste
             value={form.organization_id}
             onChange={(e) => setForm((p) => ({ ...p, organization_id: e.target.value }))}
             className={inputCls}
+            disabled={isReadOnly}
           >
             <option value="">Selecciona un campus</option>
             {orgs.map((o) => (
@@ -125,6 +135,7 @@ export function Step1({ election, token, onSaved, onSaveAndExit, onCancel }: Ste
               value={form.start_at}
               onChange={(e) => setForm((p) => ({ ...p, start_at: e.target.value }))}
               className={inputCls}
+              disabled={isReadOnly}
             />
           </div>
           <div>
@@ -134,8 +145,10 @@ export function Step1({ election, token, onSaved, onSaveAndExit, onCancel }: Ste
             <input
               type="datetime-local"
               value={form.end_at}
+              min={form.start_at || undefined}
               onChange={(e) => setForm((p) => ({ ...p, end_at: e.target.value }))}
               className={inputCls}
+              disabled={isReadOnly}
             />
           </div>
         </div>
@@ -150,34 +163,41 @@ export function Step1({ election, token, onSaved, onSaveAndExit, onCancel }: Ste
             rows={4}
             placeholder="Mensaje que verán los votantes al iniciar el proceso de votación…"
             className={`${inputCls} resize-none`}
+            disabled={isReadOnly}
           />
         </div>
       </div>
 
       <WizardBottomBar>
-        <BtnSecondary onClick={onCancel}>Cancelar</BtnSecondary>
-        <div className="ml-auto flex flex-wrap items-center gap-3">
-          <BtnAccent
-            loading={saving}
-            onClick={async () => {
-              const e = await save()
-              if (e) onSaveAndExit(e)
-            }}
-          >
-            <Save size={15} />
-            Guardar y Salir
-          </BtnAccent>
-          <BtnPrimary
-            loading={saving}
-            onClick={async () => {
-              const e = await save()
-              if (e) onSaved(e)
-            }}
-          >
-            Guardar y Continuar
-            <ChevronRight size={16} />
-          </BtnPrimary>
-        </div>
+        {isReadOnly ? (
+          <BtnSecondary onClick={onCancel}>Cerrar</BtnSecondary>
+        ) : (
+          <>
+            <BtnSecondary onClick={onCancel}>Cancelar</BtnSecondary>
+            <div className="ml-auto flex flex-wrap items-center gap-3">
+              <BtnAccent
+                loading={saving}
+                onClick={async () => {
+                  const e = await save()
+                  if (e) onSaveAndExit(e)
+                }}
+              >
+                <Save size={15} />
+                Guardar y Salir
+              </BtnAccent>
+              <BtnPrimary
+                loading={saving}
+                onClick={async () => {
+                  const e = await save()
+                  if (e) onSaved(e)
+                }}
+              >
+                Guardar y Continuar
+                <ChevronRight size={16} />
+              </BtnPrimary>
+            </div>
+          </>
+        )}
       </WizardBottomBar>
     </>
   )

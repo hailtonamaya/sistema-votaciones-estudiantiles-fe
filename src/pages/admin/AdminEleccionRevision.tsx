@@ -35,6 +35,7 @@ export default function AdminEleccionRevision() {
   }, [token])
 
   useEffect(() => {
+    
     if (!selectedId || !token) { setSelectedElection(null); return }
     setLoadingElection(true)
     getElection(token, selectedId)

@@ -13,11 +13,20 @@ import {
   listCareers,
 } from "@/services/admin.service"
 import {
+  getDashboard,
   getPrediction,
   getInsights,
+  type DashboardData,
   type Prediction,
   type Insights,
 } from "@/services/results.service"
+import {
+  CareerAssociationChart,
+  CareerVotesChart,
+  EscrutinioTable,
+  HourlyTurnoutChart,
+  PlanillasRanking,
+} from "@/components/DashboardCharts"
 import {
   ELECTION_STATUS_LABELS,
   formatPercent,
@@ -48,10 +57,18 @@ interface ChartCardProps {
   chart: ReactNode
 }
 
-function ChartComingSoon({ label }: { label: string }) {
+function ChartLoading() {
   return (
     <div className="flex h-40 items-center justify-center rounded-xl bg-gray-50">
-      <p className="text-sm text-gray-400">{label} — próximamente</p>
+      <Loader2 size={20} className="animate-spin text-gray-300" />
+    </div>
+  )
+}
+
+function ChartUnavailable() {
+  return (
+    <div className="flex h-40 items-center justify-center rounded-xl bg-gray-50">
+      <p className="text-sm text-gray-400">No se pudieron cargar los datos del gráfico</p>
     </div>
   )
 }
@@ -88,6 +105,8 @@ export default function AdminDashboard() {
   const [actionsOpen, setActionsOpen] = useState(false)
   const [prediction, setPrediction] = useState<Prediction | null>(null)
   const [insights, setInsights] = useState<Insights | null>(null)
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null)
+  const [dashLoading, setDashLoading] = useState(false)
   const [predLoading, setPredLoading] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
@@ -124,6 +143,12 @@ export default function AdminDashboard() {
       .then(setPrediction)
       .catch(() => setPrediction(null))
       .finally(() => setPredLoading(false))
+
+    setDashLoading(true)
+    getDashboard(currentElectionId, token)
+      .then(setDashboard)
+      .catch(() => setDashboard(null))
+      .finally(() => setDashLoading(false))
 
     setAiLoading(true)
     getInsights(currentElectionId, token)
@@ -417,35 +442,73 @@ export default function AdminDashboard() {
                 title="Participación por Hora"
                 subtitle="Votos acumulados durante la jornada"
                 icon={<TrendingUp size={18} />}
-                chart={<ChartComingSoon label="Gráfico de participación por hora" />}
+                chart={
+                  dashLoading ? (
+                    <ChartLoading />
+                  ) : dashboard ? (
+                    <HourlyTurnoutChart points={dashboard.turnout_by_hour} />
+                  ) : (
+                    <ChartUnavailable />
+                  )
+                }
               />
               <ChartCard
                 title="Votos por Carrera"
                 subtitle="Facultades con mayor participación"
                 icon={<GraduationCap size={18} />}
-                chart={<ChartComingSoon label="Gráfico de votos por carrera" />}
+                chart={
+                  dashLoading ? (
+                    <ChartLoading />
+                  ) : dashboard ? (
+                    <CareerVotesChart careers={dashboard.by_career} />
+                  ) : (
+                    <ChartUnavailable />
+                  )
+                }
               />
             </div>
             <ChartCard
               title="Distribución de Votos: Carrera y Planilla"
               subtitle="Preferencias de asociación por facultad"
               icon={<BarChart2 size={18} />}
-              chart={<ChartComingSoon label="Gráfico de distribución por planilla" />}
+              chart={
+                dashLoading ? (
+                  <ChartLoading />
+                ) : dashboard ? (
+                  <CareerAssociationChart associations={dashboard.by_association} />
+                ) : (
+                  <ChartUnavailable />
+                )
+              }
             />
           </div>
         ))}
 
-      {activeTab === "ranking" && (
-        <div className="flex min-h-[360px] items-center justify-center rounded-2xl bg-white shadow-sm">
-          <p className="text-sm text-gray-400">Ranking de Planillas — próximamente</p>
-        </div>
-      )}
+      {activeTab === "ranking" &&
+        (dashboard ? (
+          <PlanillasRanking associations={dashboard.by_association} />
+        ) : (
+          <div className="flex min-h-[360px] items-center justify-center rounded-2xl bg-white shadow-sm">
+            <p className="text-sm text-gray-400">
+              {dashLoading ? "Cargando ranking…" : "Activa una elección para ver el ranking de planillas."}
+            </p>
+          </div>
+        ))}
 
-      {activeTab === "escrutinio" && (
-        <div className="flex min-h-[360px] items-center justify-center rounded-2xl bg-white shadow-sm">
-          <p className="text-sm text-gray-400">Tabla de Escrutinio — próximamente</p>
-        </div>
-      )}
+      {activeTab === "escrutinio" &&
+        (dashboard ? (
+          <EscrutinioTable
+            careers={dashboard.by_career}
+            associations={dashboard.by_association}
+            totals={dashboard.totals}
+          />
+        ) : (
+          <div className="flex min-h-[360px] items-center justify-center rounded-2xl bg-white shadow-sm">
+            <p className="text-sm text-gray-400">
+              {dashLoading ? "Cargando escrutinio…" : "Activa una elección para ver la tabla de escrutinio."}
+            </p>
+          </div>
+        ))}
     </AdminLayout>
   )
 }

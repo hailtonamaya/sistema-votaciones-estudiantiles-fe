@@ -62,10 +62,6 @@ export default function AdminEleccionesDetalles() {
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
   const [view, setView] = useState<"grid" | "list">("grid")
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadElections() }, [])
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { listOrganizations(token!).then(setOrganizations).catch(() => {}) }, [])
 
   async function loadElections() {
     try {
@@ -79,6 +75,11 @@ export default function AdminEleccionesDetalles() {
       setLoading(false)
     }
   }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
+  useEffect(() => { loadElections() }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { listOrganizations(token!).then(setOrganizations).catch(() => {}) }, [])
 
   async function handleDelete(id: string) {
     try {

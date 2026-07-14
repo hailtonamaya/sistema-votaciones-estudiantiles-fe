@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
 import { AdminLayout } from "@/components/AdminLayout"
+import { ForecastPanel } from "@/components/ForecastPanel"
 import { StatCard } from "@/components/StatCard"
 import { TabBar } from "@/components/TabBar"
 import { useAuth } from "@/context/AuthContext"
@@ -573,6 +574,7 @@ export default function AdminResultados() {
     { id: "resumen",   label: "Resumen",     icon: <LayoutDashboard size={14} /> },
     { id: "carreras",  label: "Por Carrera",  icon: <GraduationCap size={14} /> },
     { id: "planillas", label: "Planillas",    icon: <ListOrdered size={14} /> },
+    { id: "pronostico", label: "Pronóstico",  icon: <TrendingUp size={14} /> },
     { id: "escrutinio", label: "Escrutinio",  icon: <FileText size={14} /> },
   ]
 
@@ -931,6 +933,13 @@ export default function AdminResultados() {
                     </div>
                   )}
                 </div>
+              )}
+
+              {/* ══════════════════════════════════════════════════════════
+                  TAB: PRONÓSTICO
+              ══════════════════════════════════════════════════════════ */}
+              {activeTab === "pronostico" && selectedId && token && (
+                <ForecastPanel electionId={selectedId} token={token} refreshKey={refreshKey} />
               )}
 
               {/* ══════════════════════════════════════════════════════════

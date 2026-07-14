@@ -2,29 +2,8 @@ import { useState } from "react"
 import { ArrowLeft, CheckCircle2, Users, X } from "lucide-react"
 import { AssociationCard, BlankVoteCard } from "@/components/student/AssociationCard"
 import { UnitecLogo } from "@/components/UnitecLogo"
-import type { ApiAssociation } from "@/services/admin.service"
 import type { Association, Candidate } from "@/types/voting"
 import { BRAND, ACCENT } from "@/lib/brand"
-
-// ─── Type mapping helper ──────────────────────────────────────────────────────
-
-export function mapApiAssociation(a: ApiAssociation, careerName: string): Association {
-  return {
-    id: a.association_id,
-    name: a.name,
-    careerId: a.election_career?.career_id ?? "",
-    careerName,
-    photoUrl: a.logo_url,
-    candidates: (a.association_member ?? []).map(
-      (m): Candidate => ({
-        id: m.association_member_id,
-        name: m.full_name,
-        role: m.role ?? "Miembro",
-        photoUrl: m.photo_url,
-      }),
-    ),
-  }
-}
 
 // ─── Candidate card ───────────────────────────────────────────────────────────
 

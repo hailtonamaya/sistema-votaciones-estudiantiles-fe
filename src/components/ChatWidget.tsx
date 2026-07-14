@@ -90,7 +90,6 @@ export function ChatWidget() {
   const welcome = isAdmin ? WELCOME_ADMIN : WELCOME_STUDENT
   const suggestions = isAdmin ? SUGGESTIONS_ADMIN : SUGGESTIONS_STUDENT
 
-  // Pages with a fixed bottom bar (wizard): move the widget up so it doesn't cover the bar
   const hasFixedBottomBar = pathname.includes("/wizard")
   const bottomPos = hasFixedBottomBar ? "bottom-24" : "bottom-6"
 

@@ -140,7 +140,8 @@ export default function AdminEleccionWizard() {
               isReadOnly={isReadOnly}
               onSaved={(e) => {
                 setElection(e)
-                isEditMode ? handleExit() : goTo(2, e.election_id)
+                if (isEditMode) handleExit()
+                else goTo(2, e.election_id)
               }}
               onSaveAndExit={(e) => { setElection(e); handleExit() }}
               onCancel={handleExit}

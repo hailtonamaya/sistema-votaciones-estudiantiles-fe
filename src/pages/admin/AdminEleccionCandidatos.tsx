@@ -33,6 +33,7 @@ export default function AdminEleccionCandidatos() {
   }, [token])
 
   useEffect(() => {
+    
     setSelectedElection(elections.find((e) => e.election_id === selectedId) ?? null)
   }, [selectedId, elections])
 

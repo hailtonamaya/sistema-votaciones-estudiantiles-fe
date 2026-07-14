@@ -35,6 +35,7 @@ export default function AdminEleccionAsociaciones() {
   }, [token])
 
   useEffect(() => {
+    
     if (!selectedId || !token) { setSelectedElection(null); return }
     setLoadingElection(true)
     getElection(token, selectedId)

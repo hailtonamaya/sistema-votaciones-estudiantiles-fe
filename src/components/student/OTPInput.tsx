@@ -1,4 +1,5 @@
 import { useRef, type KeyboardEvent, type ClipboardEvent } from "react"
+import { BRAND } from "@/lib/brand"
 
 interface Props {
   value: string[]
@@ -53,7 +54,8 @@ export function OTPInput({ value, onChange }: Props) {
           onChange={(e) => handleChange(i, e.target.value)}
           onKeyDown={(e) => handleKeyDown(i, e)}
           onPaste={handlePaste}
-          className="h-12 w-12 rounded-lg border border-gray-300 text-center text-lg font-semibold text-[#1B2770] outline-none transition focus:border-[#1B2770] focus:ring-2 focus:ring-[#1B2770]/20"
+          className="h-12 w-12 rounded-lg border border-gray-300 text-center text-lg font-semibold outline-none transition focus:ring-2 focus:ring-brand/20"
+          style={{ color: BRAND, borderColor: digit ? BRAND : undefined }}
         />
       ))}
     </div>

@@ -1,5 +1,6 @@
 import type { Association } from "@/types/voting"
 import { UnitecLogo } from "@/components/UnitecLogo"
+import { BRAND } from "@/lib/brand"
 
 interface AssociationCardProps {
   association: Association
@@ -14,18 +15,22 @@ export function AssociationCard({ association, onClick }: AssociationCardProps) 
   return (
     <button
       onClick={onClick}
-      className="group w-full overflow-hidden rounded-2xl bg-white text-left shadow-sm transition hover:-translate-y-1 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#1B2770]/40"
+      className="group w-full overflow-hidden rounded-2xl bg-white text-left shadow-sm transition hover:-translate-y-1 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand/40"
     >
       <div className="h-48 w-full overflow-hidden bg-gray-100">
         {association.photoUrl ? (
           <img
             src={association.photoUrl}
             alt={association.name}
+            loading="lazy"
+            decoding="async"
             className="h-full w-full object-cover"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-slate-200 text-slate-400">
             <svg
+              aria-hidden="true"
+              focusable="false"
               width="48"
               height="48"
               viewBox="0 0 24 24"
@@ -42,7 +47,7 @@ export function AssociationCard({ association, onClick }: AssociationCardProps) 
         )}
       </div>
       <div className="p-4">
-        <p className="font-bold text-[#1B2770]">{association.name}</p>
+        <p className="font-bold" style={{ color: BRAND }}>{association.name}</p>
         <p className="mt-0.5 text-sm text-gray-500">{association.careerName}</p>
       </div>
     </button>
@@ -53,13 +58,13 @@ export function BlankVoteCard({ onClick }: BlankVoteCardProps) {
   return (
     <button
       onClick={onClick}
-      className="group w-full overflow-hidden rounded-2xl bg-white text-left shadow-sm transition hover:-translate-y-1 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#1B2770]/40"
+      className="group w-full overflow-hidden rounded-2xl bg-white text-left shadow-sm transition hover:-translate-y-1 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand/40"
     >
       <div className="flex h-48 w-full items-center justify-center bg-gray-50">
         <UnitecLogo size="md" />
       </div>
       <div className="p-4">
-        <p className="font-bold text-[#1B2770]">Registrar Voto Blanco</p>
+        <p className="font-bold" style={{ color: BRAND }}>Registrar Voto Blanco</p>
       </div>
     </button>
   )

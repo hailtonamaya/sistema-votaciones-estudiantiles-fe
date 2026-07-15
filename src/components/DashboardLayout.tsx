@@ -1,15 +1,18 @@
 import { useNavigate } from "react-router-dom"
 import { useAuth, type UserRole } from "@/context/AuthContext"
+import { BRAND } from "@/lib/brand"
 
 const ROLE_LABEL: Record<UserRole, string> = {
   admin: "Administrador",
   observer: "Observador",
+  auditor: "Auditor",
   student: "Estudiante",
 }
 
 const ROLE_COLOR: Record<UserRole, string> = {
   admin: "bg-blue-100 text-blue-800",
   observer: "bg-emerald-100 text-emerald-800",
+  auditor: "bg-amber-100 text-amber-800",
   student: "bg-purple-100 text-purple-800",
 }
 
@@ -35,9 +38,9 @@ export function DashboardLayout({ children }: Props) {
   })
 
   return (
-    <div className="min-h-screen bg-[#EDF0F5]">
-      <header className="bg-[#1B2770] shadow-lg">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+    <div className="min-h-screen bg-bg-light">
+      <header className="shadow-lg" style={{ backgroundColor: BRAND }}>
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-center gap-4">
             <img
               src="/unitec-logo.png"
@@ -89,13 +92,13 @@ export function DashboardLayout({ children }: Props) {
         </div>
       </header>
 
-      <div className="border-b border-[#1B2770]/10 bg-white px-6 py-2">
+      <div className="border-b border-brand/10 bg-white px-4 py-2 sm:px-6">
         <p className="mx-auto max-w-7xl text-xs capitalize text-gray-400">
           {dateStr}
         </p>
       </div>
 
-      <main className="mx-auto max-w-7xl px-6 py-10">{children}</main>
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">{children}</main>
     </div>
   )
 }

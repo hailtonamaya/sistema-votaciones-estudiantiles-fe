@@ -1,5 +1,6 @@
 import { AdminLayout } from "@/components/AdminLayout"
 import { Construction } from "lucide-react"
+import { BRAND } from "@/lib/brand"
 
 interface Props {
   title: string
@@ -9,7 +10,7 @@ export default function AdminPlaceholder({ title }: Props) {
   return (
     <AdminLayout>
       <div className="mb-5">
-        <h1 className="text-2xl font-bold text-[#1B2770]">{title}</h1>
+        <h1 className="text-2xl font-bold" style={{ color: BRAND }}>{title}</h1>
       </div>
       <div className="flex min-h-[360px] items-center justify-center rounded-2xl bg-white shadow-sm">
         <div className="flex flex-col items-center gap-3 text-center">

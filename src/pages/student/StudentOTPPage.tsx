@@ -1,10 +1,11 @@
-import { useState, type FormEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import { useNavigate } from "react-router-dom"
 import { UnitecLogo } from "@/components/UnitecLogo"
 import { OTPInput } from "@/components/student/OTPInput"
 import { useAuth } from "@/context/AuthContext"
 import { useVoting } from "@/context/VotingContext"
 import { verifyOTP, getStudentElection } from "@/services/voting.service"
+import { BRAND } from "@/lib/brand"
 
 export default function StudentOTPPage() {
   const [digits, setDigits] = useState<string[]>(Array(6).fill(""))
@@ -14,24 +15,25 @@ export default function StudentOTPPage() {
   const { login } = useAuth()
   const { email, setElection, startVoting } = useVoting()
 
-  if (!email) {
-    navigate("/student/login")
-    return null
-  }
+  useEffect(() => {
+    if (!email) navigate("/student/login", { replace: true })
+  }, [email, navigate])
+
+  if (!email) return null
 
   const code = digits.join("")
   const complete = code.length === 6 && digits.every(Boolean)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!complete || loading) return
+    if (!complete || loading || !email) return
 
     setLoading(true)
     setError("")
 
     let token = ""
     try {
-      const { token: t, user } = await verifyOTP(email!, code)
+      const { token: t, user } = await verifyOTP(email as string, code)
 
       if (user.role !== "student") {
         setError("Este portal es exclusivo para estudiantes.")
@@ -68,18 +70,18 @@ export default function StudentOTPPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#EDF0F5] px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-bg-light px-4">
       <div className="mb-8">
         <UnitecLogo size="lg" />
       </div>
 
-      <h1 className="mb-8 text-2xl font-bold text-[#1B2770]">
+      <h1 className="mb-8 text-xl font-bold sm:text-2xl" style={{ color: BRAND }}>
         Inicio de Sesión Estudiantil
       </h1>
 
       <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-sm">
         <form onSubmit={handleSubmit} noValidate>
-          <p className="mb-4 text-center text-sm text-[#1B2770]">
+          <p className="mb-4 text-center text-sm" style={{ color: BRAND }}>
             Hemos enviado un código de 6 dígitos a tu correo.
           </p>
 
@@ -94,7 +96,8 @@ export default function StudentOTPPage() {
           <button
             type="submit"
             disabled={loading || !complete}
-            className="mt-6 w-full rounded-lg bg-[#1B2770] py-3 text-sm font-semibold text-white transition hover:bg-[#14205A] disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-6 w-full rounded-lg py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            style={{ backgroundColor: BRAND || "#10b981" }}
           >
             {loading ? "Verificando..." : "Iniciar Sesión"}
           </button>

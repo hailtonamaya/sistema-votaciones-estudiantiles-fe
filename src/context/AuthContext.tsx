@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, type ReactNode } from "react"
 
-export type UserRole = "admin" | "observer" | "student"
+export type UserRole = "admin" | "observer" | "auditor" | "student"
 
 export interface AuthUser {
   id: string
@@ -59,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const ctx = useContext(AuthContext)
   if (!ctx) throw new Error("useAuth must be used within AuthProvider")

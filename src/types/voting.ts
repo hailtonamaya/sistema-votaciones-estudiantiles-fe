@@ -1,11 +1,3 @@
-export interface Student {
-  id: string
-  email: string
-  name: string
-  careerId: string
-  careerName: string
-}
-
 export interface Candidate {
   id: string
   name: string
@@ -28,11 +20,13 @@ export interface Election {
   careerId: string
   careerName: string
   associations: Association[]
+  hasVoted: boolean
 }
 
 export interface VotePayload {
   electionId: string
   associationId: string | null // null = voto blanco
+  careerId: string
 }
 
 export interface VoteResult {

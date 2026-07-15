@@ -5,24 +5,43 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from "react"
+import { useLocation } from "react-router-dom"
 import { Bot, Loader, MessageSquare, Send, Sparkle, X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { ApiError } from "@/lib/api"
 import { useAuth } from "@/context/AuthContext"
 import { sendChatMessage, type ChatMessage } from "@/services/ai.service"
+import { BRAND } from "@/lib/brand"
 
-const WELCOME: ChatMessage = {
+type ChatEntry = ChatMessage & { id: string }
+
+const WELCOME_STUDENT: ChatEntry = {
+  id: "welcome",
   role: "assistant",
   content:
     "¡Hola! Soy el asistente de Elecciones UNITEC. Puedo explicarte cómo funciona el proceso de votación, los códigos OTP, los estados de una elección y resolver dudas frecuentes. ¿En qué te ayudo?",
 }
 
-const SUGGESTIONS = [
+const WELCOME_ADMIN: ChatEntry = {
+  id: "welcome",
+  role: "assistant",
+  content:
+    "¡Hola! Soy el asistente administrativo de Elecciones UNITEC. Puedo ayudarte con la creación y gestión de elecciones, asociaciones, votantes y configuración del sistema. ¿En qué te ayudo?",
+}
+
+const SUGGESTIONS_STUDENT = [
   "¿Cómo voto?",
   "No me llegó el código OTP",
   "¿Puedo cambiar mi voto?",
   "¿El voto es secreto?",
+]
+
+const SUGGESTIONS_ADMIN = [
+  "¿Cómo crear una elección?",
+  "¿Cómo importar votantes?",
+  "¿Cómo activar una elección?",
+  "¿Qué estados tiene una elección?",
 ]
 
 function renderInline(text: string) {
@@ -36,7 +55,7 @@ function renderInline(text: string) {
   )
 }
 
-function MessageBubble({ message }: { message: ChatMessage }) {
+function MessageBubble({ message }: { message: ChatEntry }) {
   const isUser = message.role === "user"
   return (
     <div
@@ -49,9 +68,10 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         className={cn(
           "max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed shadow-sm",
           isUser
-            ? "rounded-br-md bg-[#1B2770] text-white"
+            ? "rounded-br-md text-white"
             : "rounded-bl-md bg-white text-gray-800 ring-1 ring-gray-200",
         )}
+        style={isUser ? { backgroundColor: BRAND } : undefined}
       >
         {message.content.split("\n").map((line, i) => (
           <p key={i} className={i === 0 ? "" : "mt-1"}>
@@ -65,8 +85,16 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 
 export function ChatWidget() {
   const { token, user } = useAuth()
+  const { pathname } = useLocation()
+  const isAdmin = user?.role === "admin"
+  const welcome = isAdmin ? WELCOME_ADMIN : WELCOME_STUDENT
+  const suggestions = isAdmin ? SUGGESTIONS_ADMIN : SUGGESTIONS_STUDENT
+
+  const hasFixedBottomBar = pathname.includes("/wizard")
+  const bottomPos = hasFixedBottomBar ? "bottom-24" : "bottom-6"
+
   const [open, setOpen] = useState(false)
-  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME])
+  const [messages, setMessages] = useState<ChatEntry[]>([welcome])
   const [input, setInput] = useState("")
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -85,22 +113,20 @@ export function ChatWidget() {
     }
   }, [open, messages.length, sending])
 
-  if (!token || user?.role !== "student") return null
+  if (!token || !["student", "admin"].includes(user?.role ?? "")) return null
 
   async function send(content: string) {
     const trimmed = content.trim()
     if (!trimmed || sending) return
     setError(null)
-    const next: ChatMessage[] = [...messages, { role: "user", content: trimmed }]
+    const next: ChatEntry[] = [...messages, { id: crypto.randomUUID(), role: "user", content: trimmed }]
     setMessages(next)
     setInput("")
     setSending(true)
     try {
-      const reply = await sendChatMessage(
-        next.filter((m) => m !== WELCOME),
-        token!,
-      )
-      setMessages((m) => [...m, { role: "assistant", content: reply }])
+      const history: ChatMessage[] = next.filter((m) => m.id !== "welcome").map(({ role, content }) => ({ role, content }))
+      const reply = await sendChatMessage(history, token!)
+      setMessages((m) => [...m, { id: crypto.randomUUID(), role: "assistant", content: reply }])
     } catch (e) {
       const msg =
         e instanceof ApiError
@@ -109,10 +135,7 @@ export function ChatWidget() {
       setError(msg)
       setMessages((m) => [
         ...m,
-        {
-          role: "assistant",
-          content: "Tuve un problema procesando tu pregunta. Intenta de nuevo en un momento.",
-        },
+        { id: crypto.randomUUID(), role: "assistant", content: "Tuve un problema procesando tu pregunta. Intenta de nuevo en un momento." },
       ])
     } finally {
       setSending(false)
@@ -138,7 +161,11 @@ export function ChatWidget() {
           type="button"
           aria-label="Abrir asistente de votación"
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-[#1B2770] px-4 py-3 text-white shadow-lg ring-1 ring-black/5 transition hover:bg-[#141d57] hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1B2770]/40"
+          className={cn(
+            "fixed right-6 z-50 flex items-center gap-2 rounded-full px-4 py-3 text-white shadow-lg ring-1 ring-black/5 transition hover:opacity-90 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40",
+            bottomPos,
+          )}
+          style={{ backgroundColor: BRAND }}
         >
           <MessageSquare className="h-5 w-5" />
           <span className="text-sm font-medium">Asistente</span>
@@ -148,10 +175,14 @@ export function ChatWidget() {
       {open && (
         <div
           role="dialog"
+          aria-modal="true"
           aria-label="Asistente de votación"
-          className="fixed bottom-6 right-6 z-50 flex h-[34rem] w-[22rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl bg-[#F6F8FC] shadow-2xl ring-1 ring-black/10"
+          className={cn(
+            "fixed right-6 z-50 flex max-h-[calc(100dvh-3rem)] h-[34rem] w-[22rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl bg-[#F6F8FC] shadow-2xl ring-1 ring-black/10",
+            bottomPos,
+          )}
         >
-          <header className="flex items-center justify-between bg-[#1B2770] px-4 py-3 text-white">
+          <header className="flex items-center justify-between px-4 py-3 text-white" style={{ backgroundColor: BRAND }}>
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
                 <Bot className="h-4 w-4" />
@@ -160,7 +191,7 @@ export function ChatWidget() {
                 <p className="text-sm font-semibold">Asistente UNITEC</p>
                 <p className="flex items-center gap-1 text-[11px] text-white/70">
                   <Sparkle className="h-2.5 w-2.5" />
-                  IA · Proceso de votación
+                  {isAdmin ? "IA · Panel administrativo" : "IA · Proceso de votación"}
                 </p>
               </div>
             </div>
@@ -178,8 +209,8 @@ export function ChatWidget() {
             ref={scrollerRef}
             className="flex-1 space-y-3 overflow-y-auto px-3 py-3"
           >
-            {messages.map((m, i) => (
-              <MessageBubble key={i} message={m} />
+            {messages.map((m) => (
+              <MessageBubble key={m.id} message={m} />
             ))}
 
             {sending && (
@@ -197,12 +228,15 @@ export function ChatWidget() {
                   Preguntas frecuentes
                 </p>
                 <div className="flex flex-wrap gap-1.5">
-                  {SUGGESTIONS.map((s) => (
+                  {suggestions.map((s) => (
                     <button
                       key={s}
                       type="button"
                       onClick={() => send(s)}
-                      className="rounded-full bg-white px-3 py-1 text-xs text-[#1B2770] ring-1 ring-[#1B2770]/20 transition hover:bg-[#1B2770] hover:text-white"
+                      className="rounded-full bg-white px-3 py-1 text-xs ring-1 ring-brand/20 transition hover:text-white"
+                      style={{ color: BRAND }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = BRAND)}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "")}
                     >
                       {s}
                     </button>
@@ -230,13 +264,14 @@ export function ChatWidget() {
               rows={1}
               maxLength={2000}
               placeholder="Escribe tu pregunta…"
-              className="max-h-32 flex-1 resize-none rounded-xl bg-gray-100 px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1B2770]/30"
+              className="max-h-32 flex-1 resize-none rounded-xl bg-gray-100 px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/30"
             />
             <button
               type="submit"
               disabled={!input.trim() || sending}
               aria-label="Enviar mensaje"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1B2770] text-white transition hover:bg-[#141d57] disabled:cursor-not-allowed disabled:bg-gray-300"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-gray-300"
+              style={{ backgroundColor: input.trim() && !sending ? BRAND : undefined }}
             >
               <Send className="h-4 w-4" />
             </button>

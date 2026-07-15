@@ -22,7 +22,7 @@ function InfoCard({ title, description, icon, badge, badgeColor }: InfoCardProps
           </span>
         )}
       </div>
-      <h3 className="font-semibold text-gray-900 group-hover:text-[#1B2770] transition">
+      <h3 className="font-semibold text-gray-900 transition group-hover:text-emerald-700">
         {title}
       </h3>
       <p className="mt-1 text-sm text-gray-500">{description}</p>
@@ -39,7 +39,7 @@ export default function ObserverDashboard() {
 
   return (
     <DashboardLayout>
-      <div className="mb-8 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 p-8 text-white shadow-sm">
+      <div className="mb-8 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 p-5 text-white shadow-sm sm:p-8">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-white/60">

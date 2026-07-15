@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { BRAND } from "@/lib/brand"
 
 interface Props {
   startTime: Date
@@ -18,9 +19,11 @@ export function VotingTimer({ startTime }: Props) {
   const seconds = elapsed % 60
 
   return (
-    <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-[#1B2770]">
-      <span className="text-xs text-gray-500">Tiempo transcurrido:</span>
+    <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium" style={{ color: BRAND }}>
+      <span className="hidden text-xs text-gray-500 sm:inline">Tiempo transcurrido:</span>
       <svg
+        aria-hidden="true"
+        focusable="false"
         width="16"
         height="16"
         viewBox="0 0 24 24"

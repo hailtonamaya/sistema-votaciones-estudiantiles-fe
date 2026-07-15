@@ -3,41 +3,15 @@ import { useNavigate, useSearchParams } from "react-router-dom"
 import { AdminLayout } from "@/components/AdminLayout"
 import { useAuth } from "@/context/AuthContext"
 import {
-  type ApiCareer,
   type ApiElection,
-  listAssociations,
-  listCareers,
+  type ApiOrganization,
+  getElection,
   listElections,
-  listVoters,
-  transitionElection,
+  listOrganizations,
 } from "@/services/admin.service"
-import {
-  AlertCircle,
-  CheckCircle2,
-  ChevronRight,
-  Loader2,
-  Users,
-  XCircle,
-} from "lucide-react"
-
-const BRAND = "#06065C"
-const ACCENT = "#03AED2"
-
-type RevisionStatus = "ok" | "warning" | "incomplete"
-
-function StatusBadge({ status }: { status: RevisionStatus }) {
-  const cfg = {
-    ok:         { bg: "#DCFCE7", color: "#16A34A", icon: <CheckCircle2 size={14} />, label: "Completo" },
-    warning:    { bg: "#FEF9C3", color: "#A16207", icon: <AlertCircle size={14} />,  label: "Revisar" },
-    incomplete: { bg: "#FEE2E2", color: "#DC2626", icon: <XCircle size={14} />,      label: "Incompleto" },
-  }[status]
-  return (
-    <div className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold" style={{ backgroundColor: cfg.bg, color: cfg.color }}>
-      {cfg.icon}
-      {cfg.label}
-    </div>
-  )
-}
+import { Lock, Loader2, ClipboardList } from "lucide-react"
+import { BRAND, ACCENT } from "@/lib/brand"
+import { Step5 } from "./wizard/Step5Revision"
 
 export default function AdminEleccionRevision() {
   const { token } = useAuth()
@@ -45,97 +19,47 @@ export default function AdminEleccionRevision() {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const [elections, setElections] = useState<ApiElection[]>([])
+  const [organizations, setOrganizations] = useState<ApiOrganization[]>([])
+  const [selectedOrg, setSelectedOrg] = useState("")
+  const [selectedElection, setSelectedElection] = useState<ApiElection | null>(null)
   const [loadingElections, setLoadingElections] = useState(true)
-
-  const [election, setElection] = useState<ApiElection | null>(null)
-  const [assocCount, setAssocCount] = useState(0)
-  const [voterCount, setVoterCount] = useState(0)
-  const [careers, setCareers] = useState<ApiCareer[]>([])
-  const [simulateCareer, setSimulateCareer] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [activating, setActivating] = useState(false)
+  const [loadingElection, setLoadingElection] = useState(false)
 
   const selectedId = searchParams.get("election_id") ?? ""
 
   useEffect(() => {
-    listElections(token!)
-      .then(setElections)
+    Promise.all([listElections(token!), listOrganizations(token!)])
+      .then(([el, orgs]) => { setElections(el); setOrganizations(orgs) })
       .catch(() => {})
       .finally(() => setLoadingElections(false))
   }, [token])
 
   useEffect(() => {
-    if (!selectedId) {
-      setElection(null)
-      setAssocCount(0)
-      setVoterCount(0)
-      setCareers([])
-      return
-    }
-    setLoading(true)
-    Promise.all([
-      listElections(token!).then((list) => list.find((e) => e.election_id === selectedId) ?? null),
-      listAssociations(token!, { election_id: selectedId }),
-      listVoters(token!, selectedId),
-      listCareers(token!),
-    ]).then(([el, assocs, voters, c]) => {
-      setElection(el)
-      setAssocCount(assocs.length)
-      setVoterCount(voters.length)
-      setCareers(c)
-    }).catch(() => {}).finally(() => setLoading(false))
+    
+    if (!selectedId || !token) { setSelectedElection(null); return }
+    setLoadingElection(true)
+    getElection(token, selectedId)
+      .then(setSelectedElection)
+      .catch(() => {})
+      .finally(() => setLoadingElection(false))
   }, [selectedId, token])
 
   function selectElection(id: string) {
     setSearchParams(id ? { election_id: id } : {}, { replace: true })
-    setSimulateCareer("")
   }
 
-  async function handleActivate() {
-    if (!election) return
-    const nextStatus = election.status === "draft" ? "scheduled" : "open"
-    setActivating(true)
-    try {
-      await transitionElection(token!, selectedId, nextStatus)
-      navigate("/admin/elecciones/detalles")
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Error al activar")
-    } finally {
-      setActivating(false)
-    }
-  }
+  const filteredElections = selectedOrg
+    ? elections.filter((e) => e.organization_id === selectedOrg)
+    : elections
 
-  const electionOk: RevisionStatus = election?.title && election.organization_id ? "ok" : "incomplete"
-  const assocStatus: RevisionStatus = assocCount >= 2 ? "ok" : assocCount === 1 ? "warning" : "incomplete"
-  const voterStatus: RevisionStatus = voterCount >= 1 ? "ok" : "incomplete"
-  const simStatus: RevisionStatus = simulateCareer ? "ok" : "incomplete"
-
-  const rows = [
-    {
-      label: "Detalles generales",
-      detail: "Nombre, Fecha, Hora y más…",
-      status: electionOk,
-      onVerify: () => navigate(`/admin/elecciones/wizard?id=${selectedId}&step=1`),
-    },
-    {
-      label: "Cantidad de asociaciones",
-      detail: assocCount,
-      status: assocStatus,
-      onVerify: () => navigate(`/admin/elecciones/asociaciones?election_id=${selectedId}`),
-    },
-    {
-      label: "Cantidad de votantes",
-      detail: voterCount,
-      status: voterStatus,
-      onVerify: () => navigate(`/admin/elecciones/votantes?election_id=${selectedId}`),
-    },
-  ]
+  const goToElection = () => navigate(`/admin/elecciones/editar?id=${selectedId}`)
+  const goToPrev = () => navigate(`/admin/elecciones/votantes?election_id=${selectedId}`)
 
   return (
     <AdminLayout>
       <div className="mb-6">
         <h1 className="text-2xl font-bold" style={{ color: BRAND }}>Revisión</h1>
-        <p className="mt-0.5 text-sm text-gray-500">Antes de iniciar la votación debes completar las siguientes tareas.</p>
+        <p className="mt-0.5 text-sm text-gray-500">Revisa y valida la configuración antes de activar la elección.</p>
       </div>
 
       {/* Election selector */}
@@ -145,20 +69,33 @@ export default function AdminEleccionRevision() {
             <Loader2 size={15} className="animate-spin" /> Cargando elecciones…
           </div>
         ) : (
-          <div className="flex items-center gap-4">
-            <label className="text-sm font-semibold whitespace-nowrap" style={{ color: BRAND }}>
-              Elección:
-            </label>
-            <select
-              value={selectedId}
-              onChange={(e) => selectElection(e.target.value)}
-              className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-blue-400"
-            >
-              <option value="">Selecciona una elección</option>
-              {elections.map((e) => (
-                <option key={e.election_id} value={e.election_id}>{e.title}</option>
-              ))}
-            </select>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-semibold whitespace-nowrap" style={{ color: BRAND }}>Campus:</label>
+              <select
+                value={selectedOrg}
+                onChange={(e) => setSelectedOrg(e.target.value)}
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              >
+                <option value="">Todos</option>
+                {organizations.map((o) => (
+                  <option key={o.organization_id} value={o.organization_id}>{o.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-1 items-center gap-2">
+              <label className="text-sm font-semibold whitespace-nowrap" style={{ color: BRAND }}>Elección:</label>
+              <select
+                value={selectedId}
+                onChange={(e) => selectElection(e.target.value)}
+                className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-blue-400"
+              >
+                <option value="">Selecciona una elección</option>
+                {filteredElections.map((e) => (
+                  <option key={e.election_id} value={e.election_id}>{e.title}</option>
+                ))}
+              </select>
+            </div>
           </div>
         )}
       </div>
@@ -166,92 +103,42 @@ export default function AdminEleccionRevision() {
       {!selectedId ? (
         <div className="flex flex-col items-center justify-center rounded-2xl bg-white py-20 px-8 shadow-sm text-center">
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
-            <Users size={30} style={{ color: ACCENT }} />
+            <ClipboardList size={30} style={{ color: ACCENT }} />
           </div>
           <p className="mb-2 text-lg font-bold" style={{ color: BRAND }}>Selecciona una elección</p>
           <p className="max-w-sm text-sm text-gray-500">
-            Elige una elección en el selector de arriba para revisar su estado antes de activarla.
+            Elige una elección en el selector de arriba para revisar su configuración.
           </p>
         </div>
-      ) : loading ? (
+      ) : loadingElection ? (
         <div className="flex justify-center py-16">
           <Loader2 size={24} className="animate-spin text-gray-400" />
         </div>
       ) : (
-        <div className="max-w-3xl rounded-2xl bg-white p-8 shadow-sm space-y-8">
-          {/* Summary */}
-          <div>
-            <h2 className="mb-4 text-lg font-bold" style={{ color: BRAND }}>Resumen de Elección</h2>
-            <div className="space-y-4">
-              {rows.map((row) => (
-                <div key={row.label} className="flex items-center gap-4">
-                  <p className="flex-1 text-sm text-gray-700">{row.label}</p>
-                  <span className="text-sm text-gray-400 min-w-[80px] text-right">{row.detail}</span>
-                  <button
-                    onClick={row.onVerify}
-                    className="rounded-lg px-5 py-2 text-sm font-semibold text-white transition hover:opacity-90"
-                    style={{ backgroundColor: BRAND }}
-                  >
-                    Verificar
-                  </button>
-                  <StatusBadge status={row.status as RevisionStatus} />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Simulate voting */}
-          <div>
-            <h2 className="mb-4 text-lg font-bold" style={{ color: BRAND }}>Probar experiencia de votación</h2>
-            <div className="flex items-center gap-3">
-              <select
-                value={simulateCareer}
-                onChange={(e) => setSimulateCareer(e.target.value)}
-                className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-blue-400"
-              >
-                <option value="">Selecciona una carrera para simular</option>
-                {careers.map((c) => (
-                  <option key={c.career_id} value={c.career_id}>{c.name} ({c.code})</option>
-                ))}
-              </select>
-              <button
-                disabled={!simulateCareer}
-                className="rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
-                style={{ backgroundColor: BRAND }}
-              >
-                Simular
-              </button>
-              <StatusBadge status={simStatus} />
-            </div>
-          </div>
-
-          {/* Election status + activate button */}
-          {election && (
-            <div className="flex items-center justify-between rounded-xl bg-gray-50 px-5 py-4">
-              <p className="text-sm text-gray-600">
-                Estado actual:{" "}
-                <span className="font-semibold" style={{ color: BRAND }}>
-                  {election.status === "draft" ? "Borrador"
-                    : election.status === "scheduled" ? "Programada"
-                    : election.status === "open" ? "Activa"
-                    : election.status}
-                </span>
-              </p>
-              {election.status !== "open" && election.status !== "closed" && election.status !== "cancelled" && (
-                <button
-                  onClick={handleActivate}
-                  disabled={activating}
-                  className="flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
-                  style={{ backgroundColor: BRAND }}
-                >
-                  {activating && <Loader2 size={15} className="animate-spin" />}
-                  {election.status === "draft" ? "Programar Elección" : "Iniciar Elección"}
-                  <ChevronRight size={16} />
-                </button>
-              )}
+        <>
+          {/* Status banners */}
+          {selectedElection?.status === "open" && (
+            <div className="mb-5 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <Lock size={15} className="shrink-0 text-amber-500" />
+              Esta elección está <strong className="mx-1">activa</strong> — paúsala para poder realizar cambios.
             </div>
           )}
-        </div>
+          {(selectedElection?.status === "closed" || selectedElection?.status === "cancelled") && (
+            <div className="mb-5 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+              <Lock size={15} className="shrink-0 text-slate-400" />
+              Esta elección está <strong className="mx-1">{selectedElection.status === "closed" ? "finalizada" : "archivada"}</strong> — solo lectura.
+            </div>
+          )}
+
+          <Step5
+            election={selectedElection}
+            electionId={selectedId}
+            token={token!}
+            hideHeader
+            onBack={goToPrev}
+            onFinish={goToElection}
+          />
+        </>
       )}
     </AdminLayout>
   )

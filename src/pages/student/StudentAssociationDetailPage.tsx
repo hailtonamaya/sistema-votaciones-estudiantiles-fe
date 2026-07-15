@@ -1,6 +1,8 @@
+import { useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { VotingTimer } from "@/components/student/VotingTimer"
 import { useVoting } from "@/context/VotingContext"
+import { BRAND } from "@/lib/brand"
 import type { Candidate } from "@/types/voting"
 
 function CandidateCard({ candidate }: { candidate: Candidate }) {
@@ -11,11 +13,15 @@ function CandidateCard({ candidate }: { candidate: Candidate }) {
           <img
             src={candidate.photoUrl}
             alt={candidate.name}
+            loading="lazy"
+            decoding="async"
             className="h-full w-full object-cover"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-slate-300">
             <svg
+              aria-hidden="true"
+              focusable="false"
               width="56"
               height="56"
               viewBox="0 0 24 24"
@@ -30,7 +36,7 @@ function CandidateCard({ candidate }: { candidate: Candidate }) {
         )}
       </div>
       <div className="p-4">
-        <p className="text-sm font-medium text-[#1B2770]">{candidate.role}</p>
+        <p className="text-sm font-medium" style={{ color: BRAND }}>{candidate.role}</p>
         <p className="mt-0.5 text-base font-bold text-gray-900">
           {candidate.name}
         </p>
@@ -43,24 +49,29 @@ export default function StudentAssociationDetailPage() {
   const navigate = useNavigate()
   const { election, selectedAssociation, voteStartTime } = useVoting()
 
-  if (
+  const isInvalid =
     !election ||
     !voteStartTime ||
     !selectedAssociation ||
     selectedAssociation === "blank"
-  ) {
-    navigate("/login")
-    return null
-  }
+
+  useEffect(() => {
+    if (isInvalid) navigate("/login", { replace: true })
+  }, [isInvalid, navigate])
+
+  if (isInvalid) return null
 
   return (
-    <div className="min-h-screen bg-[#EDF0F5]">
+    <main className="min-h-screen bg-bg-light">
       <div className="flex items-center justify-between px-6 py-4">
         <button
           onClick={() => navigate("/student/votar")}
-          className="flex items-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-[#1B2770] transition hover:bg-gray-50"
+          className="flex items-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium transition hover:bg-gray-50"
+          style={{ color: BRAND }}
         >
           <svg
+            aria-hidden="true"
+            focusable="false"
             width="16"
             height="16"
             viewBox="0 0 24 24"
@@ -77,16 +88,20 @@ export default function StudentAssociationDetailPage() {
         <VotingTimer startTime={voteStartTime} />
       </div>
 
-      <div className="relative mx-6 overflow-hidden rounded-2xl bg-slate-200 shadow-sm">
+      <div className="relative mx-4 overflow-hidden rounded-2xl bg-slate-200 shadow-sm sm:mx-6">
         {selectedAssociation.photoUrl ? (
           <img
             src={selectedAssociation.photoUrl}
             alt={selectedAssociation.name}
-            className="h-72 w-full object-cover"
+            loading="lazy"
+            decoding="async"
+            className="h-48 w-full object-cover sm:h-72"
           />
         ) : (
-          <div className="flex h-72 w-full items-center justify-center bg-slate-200 text-slate-400">
+          <div className="flex h-48 w-full items-center justify-center bg-slate-200 text-slate-400 sm:h-72">
             <svg
+              aria-hidden="true"
+              focusable="false"
               width="80"
               height="80"
               viewBox="0 0 24 24"
@@ -111,9 +126,9 @@ export default function StudentAssociationDetailPage() {
         </div>
       </div>
 
-      <div className="mx-6 mt-8 pb-32">
-        <h2 className="mb-1 text-2xl font-bold text-[#1B2770]">Candidatos</h2>
-        <div className="mb-6 h-0.5 w-20 bg-[#1B2770]" />
+      <div className="mx-4 mt-6 pb-32 sm:mx-6 sm:mt-8">
+        <h2 className="mb-1 text-2xl font-bold" style={{ color: BRAND }}>Candidatos</h2>
+        <div className="mb-6 h-0.5 w-20" style={{ backgroundColor: BRAND }} />
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {selectedAssociation.candidates.map((candidate) => (
@@ -122,14 +137,15 @@ export default function StudentAssociationDetailPage() {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-[#EDF0F5]/90 px-6 py-4 backdrop-blur-sm">
+      <div className="fixed bottom-0 left-0 right-0 bg-bg-light/90 px-6 py-4 backdrop-blur-sm">
         <button
           onClick={() => navigate("/student/confirmar")}
-          className="mx-auto block w-full max-w-sm rounded-lg bg-[#1B2770] py-4 text-base font-semibold text-white transition hover:bg-[#14205A]"
+          className="mx-auto block w-full max-w-sm rounded-lg py-4 text-base font-semibold text-white transition hover:opacity-90"
+          style={{ backgroundColor: BRAND }}
         >
           Votar
         </button>
       </div>
-    </div>
+    </main>
   )
 }

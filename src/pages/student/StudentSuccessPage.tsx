@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { UnitecLogo } from "@/components/UnitecLogo"
 import { useVoting } from "@/context/VotingContext"
 import { useAuth } from "@/context/AuthContext"
+import { BRAND } from "@/lib/brand"
 
 const AUTO_CLOSE_SECONDS = 30
 
@@ -20,13 +21,11 @@ export default function StudentSuccessPage() {
   const { voteResult, reset } = useVoting()
   const { logout } = useAuth()
 
-  if (!voteResult) {
-    navigate("/login")
-    return null
-  }
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
+    if (!voteResult) {
+      navigate("/login")
+      return
+    }
     const id = setInterval(() => {
       setCountdown((c) => {
         if (c <= 1) {
@@ -40,7 +39,9 @@ export default function StudentSuccessPage() {
       })
     }, 1000)
     return () => clearInterval(id)
-  }, [navigate, reset, logout])
+  }, [voteResult, navigate, reset, logout])
+
+  if (!voteResult) return null
 
   function handleFinish() {
     reset()
@@ -49,17 +50,17 @@ export default function StudentSuccessPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#EDF0F5] px-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-10 shadow-sm">
+    <main className="flex min-h-screen items-center justify-center bg-bg-light px-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-sm sm:p-10">
         <div className="flex justify-center">
           <UnitecLogo size="lg" />
         </div>
 
-        <h1 className="mt-8 text-center text-2xl font-bold text-[#1B2770]">
+        <h1 className="mt-8 text-center text-2xl font-bold" style={{ color: BRAND }}>
           ¡Voto Registrado!
         </h1>
 
-        <div className="mt-6 space-y-1 text-sm text-[#1B2770]">
+        <div className="mt-6 space-y-1 text-sm" style={{ color: BRAND }}>
           <p className="font-semibold">Resumen de votación</p>
           <p>Carrera: {voteResult.careerName}</p>
           <p>Asociación: {voteResult.associationName}</p>
@@ -68,7 +69,8 @@ export default function StudentSuccessPage() {
 
         <button
           onClick={handleFinish}
-          className="mt-8 w-full rounded-lg bg-[#1B2770] py-3 text-sm font-semibold text-white transition hover:bg-[#14205A]"
+          className="mt-8 w-full rounded-lg py-3 text-sm font-semibold text-white transition hover:opacity-90"
+          style={{ backgroundColor: BRAND }}
         >
           Finalizar
         </button>
@@ -77,6 +79,6 @@ export default function StudentSuccessPage() {
           La sesión se cerrará automáticamente en {countdown} segundos
         </p>
       </div>
-    </div>
+    </main>
   )
 }

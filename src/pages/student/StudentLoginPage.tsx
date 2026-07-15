@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { UnitecLogo } from "@/components/UnitecLogo"
 import { useVoting } from "@/context/VotingContext"
 import { requestStudentOTP } from "@/services/voting.service"
+import { BRAND } from "@/lib/brand"
 
 export default function StudentLoginPage() {
   const [email, setEmail] = useState("")
@@ -31,12 +32,12 @@ export default function StudentLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#EDF0F5] px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-bg-light px-4">
       <div className="mb-8">
         <UnitecLogo size="lg" />
       </div>
 
-      <h1 className="mb-8 text-2xl font-bold text-[#1B2770]">
+      <h1 className="mb-8 text-xl font-bold sm:text-2xl" style={{ color: BRAND }}>
         Inicio de Sesión Estudiantil
       </h1>
 
@@ -44,7 +45,8 @@ export default function StudentLoginPage() {
         <form onSubmit={handleSubmit} noValidate>
           <label
             htmlFor="email"
-            className="mb-2 block text-sm font-medium text-[#1B2770]"
+            className="mb-2 block text-sm font-medium"
+            style={{ color: BRAND }}
           >
             Correo institucional
           </label>
@@ -55,7 +57,7 @@ export default function StudentLoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="estudiante@unitec.edu.hn"
             autoComplete="email"
-            className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-[#1B2770] focus:ring-2 focus:ring-[#1B2770]/20"
+            className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:ring-2 focus:ring-brand/20"
           />
 
           {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
@@ -63,7 +65,8 @@ export default function StudentLoginPage() {
           <button
             type="submit"
             disabled={loading || !email.trim()}
-            className="mt-6 w-full rounded-lg bg-[#1B2770] py-3 text-sm font-semibold text-white transition hover:bg-[#14205A] disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-6 w-full rounded-lg py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            style={{ backgroundColor: BRAND }}
           >
             {loading ? "Enviando código..." : "Iniciar Sesión"}
           </button>
